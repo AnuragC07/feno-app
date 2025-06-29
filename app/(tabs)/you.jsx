@@ -8,11 +8,11 @@ import {
   Text,
   View,
 } from "react-native";
-import excited from "../assets/images/excitedmood.png";
-import good from "../assets/images/goodmood.png";
-import meh from "../assets/images/mehmood.png";
-import sad from "../assets/images/sadmood.png";
-import stressful from "../assets/images/stressfullmood.png";
+import excited from "../../assets/images/excitedmood.png";
+import good from "../../assets/images/goodmood.png";
+import meh from "../../assets/images/mehmood.png";
+import sad from "../../assets/images/sadmood.png";
+import stressful from "../../assets/images/stressfullmood.png";
 
 export default function YouScreen() {
   const [tasks, setTasks] = useState([]);
@@ -129,7 +129,7 @@ export default function YouScreen() {
     <View style={styles.container}>
       <View style={styles.profileHeader}>
         <Image
-          source={require("../assets/images/pexels-stefanstefancik-91227.jpg")}
+          source={require("../../assets/images/pexels-stefanstefancik-91227.jpg")}
           style={styles.avatar}
         />
         <View>
@@ -173,7 +173,7 @@ export default function YouScreen() {
         <View style={styles.quoteCard}>
           <View style={styles.quoteCardMood}>
             <Image
-              source={require("../assets/images/quotepng.png")}
+              source={require("../../assets/images/quotepng.png")}
               style={styles.quotes}
             />
           </View>
@@ -231,7 +231,7 @@ export default function YouScreen() {
               style={[styles.journalCard, { marginTop: 8, marginBottom: 0 }]}
             >
               <Image
-                source={require("../assets/images/quotepng.png")}
+                source={require("../../assets/images/quotepng.png")}
                 style={styles.quotes}
               />
               <Text style={styles.journalText}>{journal.content}</Text>
@@ -285,6 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     marginBottom: 2,
+    fontFamily: "Sora-Bold",
   },
   date: {
     fontSize: 18,
@@ -292,10 +293,12 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     marginBottom: 2,
     marginTop: 10,
+    fontFamily: "Sora-Bold",
   },
   atGlance: {
     fontSize: 14,
     color: "gray",
+    fontFamily: "Ubuntu-Regular",
   },
   rowCards: {
     flexDirection: "row",
@@ -331,12 +334,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#C2A94B",
+    fontFamily: "Sora-Bold",
   },
   moodSub: {
     fontSize: 12,
     color: "#e0d6bd",
     fontWeight: 600,
     marginTop: 2,
+    fontFamily: "Ubuntu-Regular",
   },
   quoteCard: {
     backgroundColor: "#FFC7B5",
@@ -356,19 +361,22 @@ const styles = StyleSheet.create({
     color: "#D1613D",
     fontWeight: "bold",
     marginBottom: 2,
+    fontFamily: "Sora-Bold",
   },
   quoteText: {
     fontSize: 14,
     color: "#A0472A",
-    fontStyle: "italic",
+    // fontStyle: "italic",
     marginBottom: 6,
     marginTop: 10,
-    fontWeight: 600,
+    // fontWeight: 600,
+    fontFamily: "Ubuntu-Regular",
   },
   quoteAuthor: {
     fontSize: 12,
     color: "#c66a4d",
     alignSelf: "flex-end",
+    fontFamily: "Ubuntu-Regular",
   },
   todoSection: {
     backgroundColor: "#fff",
@@ -387,12 +395,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 14,
+    fontFamily: "Sora-Bold",
   },
   todoProgress: {
     fontSize: 13,
     color: "#bbb",
     marginBottom: 10,
     alignSelf: "flex-end",
+    fontFamily: "Ubuntu-Regular",
   },
   todoItem: {
     flexDirection: "row",
@@ -403,6 +413,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     flex: 1,
     color: "gray",
+    fontFamily: "Ubuntu-Regular",
   },
   todoDone: {
     color: "#B6D7A8",
@@ -431,12 +442,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
     marginTop: 20,
+    fontFamily: "Sora-Bold",
   },
   journalText: {
     fontSize: 15,
     color: "#A0472A",
     fontStyle: "italic",
     marginTop: 10,
+    fontFamily: "Ubuntu-Regular",
   },
   bottomNav: {
     position: "absolute",
@@ -467,5 +480,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 2,
     marginLeft: 25,
+    fontFamily: "Sora-Bold",
   },
 });

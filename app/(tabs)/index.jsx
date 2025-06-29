@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -9,13 +10,15 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
-import excited from "../assets/images/excitedmood.png";
-import good from "../assets/images/goodmood.png";
-import meh from "../assets/images/mehmood.png";
-import sad from "../assets/images/sadmood.png";
-import stressful from "../assets/images/stressfullmood.png";
+import excited from "../../assets/images/excitedmood.png";
+import good from "../../assets/images/goodmood.png";
+import meh from "../../assets/images/mehmood.png";
+import sad from "../../assets/images/sadmood.png";
+import stressful from "../../assets/images/stressfullmood.png";
+import { supabase } from "../lib/supabase";
 
 // IMPORTANT: Replace with your computer's local IP address
 const TASK_API_URL = "http://192.168.0.11:8000/api/tasks";
@@ -23,12 +26,29 @@ const JOURNAL_API_URL = "http://192.168.0.11:8000/api/journals";
 const MOOD_API_URL = "http://192.168.0.11:8000/api/moods";
 
 export default function Home() {
+  const [user, setUser] = useState(null);
   const [selectedMood, setSelectedMood] = useState(null);
   const [task, setTask] = useState("");
   const [todos, setTodos] = useState([]);
   const [journalContent, setJournalContent] = useState("");
   const [isJournalModalVisible, setJournalModalVisible] = useState(false);
   const [journalMood, setJournalMood] = useState(null);
+  const [fontsLoaded] = useFonts({
+    "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
+    "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
+  });
+
+  // Get current user
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
   const moods = [
     {
       label: "Excited",
@@ -225,16 +245,34 @@ export default function Home() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      Alert.alert("Success", "Signed out successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to sign out");
+    }
+  };
+
+  if (!fontsLoaded) {
+    return null; // or <AppLoading />
+  }
   return (
     <>
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.greet}>
             <Image
-              source={require("../assets/images/pexels-stefanstefancik-91227.jpg")}
+              source={require("../../assets/images/pexels-stefanstefancik-91227.jpg")}
               style={styles.logo}
             />
-            <Text style={styles.title}>Hello, Adrian</Text>
+            <Text style={styles.title}>Heya, {user?.email || "User"}!</Text>
+            <TouchableOpacity
+              onPress={handleSignOut}
+              style={styles.signOutButton}
+            >
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.moodTracker}>
             <Text style={styles.moodask}>How are you feeling today?</Text>
@@ -249,7 +287,9 @@ export default function Home() {
                   onPress={() => handleSelectMood(mood.label)}
                 >
                   <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                  <Text style={styles.moodLabel}>{mood.label}</Text>
+                  <View style={styles.moodLabelContainer}>
+                    <Text style={styles.moodLabel}>{mood.label}</Text>
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -257,7 +297,7 @@ export default function Home() {
         </View>
 
         <View style={styles.tasksContainer}>
-          <Text style={styles.title}>Got things to do?</Text>
+          <Text style={styles.tasktitle}>Got things to do?</Text>
           <View style={styles.taskInputContainer}>
             <TextInput
               style={styles.taskInput}
@@ -351,10 +391,12 @@ export default function Home() {
               </Pressable>
 
               <View style={styles.journalHeader}>
-                <Text style={styles.title}>Reflect on your feelings</Text>
+                <Text style={styles.journaltitle}>
+                  Reflect on your feelings
+                </Text>
                 <View style={styles.moodContainer}>
                   <View style={styles.moodBadge}>
-                    <Text style={styles.moodLabel}>Today's Mood:</Text>
+                    <Text style={styles.moodLabelCnt}>Today&apos;s Mood:</Text>
                     <Text style={styles.moodValue}>
                       {journalMood ? journalMood : "No mood set for today"}
                     </Text>
@@ -362,7 +404,7 @@ export default function Home() {
                 </View>
               </View>
 
-              <View style={styles.journalQuote}>
+              {/* <View style={styles.journalQuote}>
                 <View style={styles.quoteIconWrapper}>
                   <Image
                     source={require("../assets/images/quotepng.png")}
@@ -372,7 +414,7 @@ export default function Home() {
                 <Text style={styles.quoteTitle}>
                   Your thoughts matter, let them flow
                 </Text>
-              </View>
+              </View> */}
 
               <View style={styles.journalContentArea}>
                 <View style={styles.journalInputContainer}>
@@ -392,7 +434,7 @@ export default function Home() {
                 <View style={styles.quickInputContainer}>
                   <TextInput
                     style={styles.quickInput}
-                    placeholder="Quick thought..."
+                    placeholder="Start typing..."
                     value={journalContent}
                     onChangeText={setJournalContent}
                     placeholderTextColor="rgba(90, 87, 86, 0.5)"
@@ -454,13 +496,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "600",
+    fontFamily: "Sora-Bold",
+    marginBottom: 10,
+    marginTop: 2,
+  },
+  tasktitle: {
+    fontSize: 24,
+    fontFamily: "Sora-Bold",
+    fontWeight: "600",
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  journaltitle: {
+    fontSize: 24,
+    fontFamily: "Sora-Bold",
+    fontWeight: "600",
     marginBottom: 10,
     marginTop: 4,
   },
   moodask: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     marginBottom: 10,
+    fontFamily: "Sora-Bold",
     color: "#916354",
     marginTop: 4,
     marginLeft: 10,
@@ -470,7 +528,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   moodTracker: {
-    marginTop: 30,
+    marginTop: 10,
   },
   moodRow: {
     flexDirection: "row",
@@ -485,6 +543,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     width: "fit-content",
     flex: 1,
+  },
+  moodLabelContainer: {
+    // borderWidth: 2,
+    // borderColor: "red",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 3,
+    fontFamily: "Ubuntu-Regular",
   },
   moodEmoji: {
     fontSize: 28,
@@ -511,6 +578,7 @@ const styles = StyleSheet.create({
   },
   taskInput: {
     width: "85%",
+    fontFamily: "Ubuntu-Regular",
   },
   taskInputSendBtn: {
     backgroundColor: "#f0dfdf",
@@ -542,7 +610,8 @@ const styles = StyleSheet.create({
   todoText: {
     flex: 1,
     fontSize: 16,
-    color: "#5a5756",
+    fontFamily: "Ubuntu-Regular",
+    color: "#787878",
   },
   todoTextCompleted: {
     textDecorationLine: "line-through",
@@ -570,7 +639,8 @@ const styles = StyleSheet.create({
   journalTriggerTitle: {
     color: "#A0472A",
     fontSize: 20,
-    fontWeight: "600",
+    fontFamily: "Sora-Bold",
+    fontWeight: 600,
   },
   journalTriggerSubtitle: {
     color: "#D1613D",
@@ -717,17 +787,24 @@ const styles = StyleSheet.create({
   },
   moodContainer: {
     marginBottom: 4,
+    fontFamily: "Ubuntu-Regular",
+  },
+  moodLabelCnt: {
+    color: "#D1613D",
+    fontSize: 15,
+    fontWeight: "500",
+    fontFamily: "Ubuntu-Regular",
   },
   moodBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 199, 181, 0.25)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    // backgroundColor: "rgba(255, 199, 181, 0.25)",
+    // paddingHorizontal: 16,
+    // paddingVertical: 10,
+    // borderRadius: 20,
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "rgba(160, 71, 42, 0.1)",
+    // borderWidth: 1,
+    // borderColor: "rgba(160, 71, 42, 0.1)",
   },
   moodLabel: {
     fontWeight: "600",
@@ -740,6 +817,8 @@ const styles = StyleSheet.create({
     color: "#D1613D",
     fontSize: 15,
     fontWeight: "500",
+    fontFamily: "Ubuntu-Regular",
+    marginLeft: 8,
   },
   journalQuote: {
     flexDirection: "row",
@@ -790,6 +869,7 @@ const styles = StyleSheet.create({
     // shadowOpacity: 0.05,
     // shadowRadius: 8,
     // elevation: 2,
+    marginBottom: 10,
   },
   journalTextInput: {
     flex: 1,
@@ -798,6 +878,7 @@ const styles = StyleSheet.create({
     color: "#5a5756",
     textAlignVertical: "top",
     minHeight: 120,
+    fontFamily: "Ubuntu-Regular",
   },
   journalBottomSection: {
     paddingHorizontal: 20,
@@ -859,5 +940,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  signOutButton: {
+    padding: 10,
+  },
+  signOutText: {
+    color: "#A0472A",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

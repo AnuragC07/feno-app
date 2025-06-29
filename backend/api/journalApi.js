@@ -77,4 +77,14 @@ router.get('/by-date/:date', async (req, res) => {
     }
 });
 
+// GET all unique journal dates
+router.get('/dates', async (req, res) => {
+    try {
+        const dates = await Journal.distinct('localDate');
+        res.status(200).json(dates);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
