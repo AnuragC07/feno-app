@@ -2,13 +2,16 @@ const express = require('express');
 const router = express.Router();
 const Task = require('../models/taskModel');
 
-// GET all tasks
+// GET all tasks for a user
 router.get('/', async (req, res) => {
     try {
-        const tasks = await Task.find({}).sort({ createdAt: -1 });
-        res.status(200).json(tasks);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        if (!req.query.userId) {
+            return res.status(400).json({ message: 'userId query param is required' });
+        }
+        const tasks = await Task.find({ userId: req.query.userId }).sort({ createdAt: -1 });
+        res.json(tasks);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -27,10 +30,10 @@ router.get('/:id', async (req, res) => {
 
 // POST a new task
 router.post('/', async (req, res) => {
-    const { content, localDate } = req.body;
+    const { content, localDate, userId } = req.body;
 
     try {
-        const task = await Task.create({ content, localDate });
+        const task = await Task.create({ content, localDate, userId });
         res.status(201).json(task);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -63,25 +66,50 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// GET tasks by date (YYYY-MM-DD)
+// GET tasks by date for a user
 router.get('/by-date/:date', async (req, res) => {
-    const { date } = req.params;
     try {
-        const tasks = await Task.find({ localDate: date }).sort({ createdAt: -1 });
+        if (!req.query.userId) {
+            return res.status(400).json({ message: 'userId query param is required' });
+        }
+        const tasks = await Task.find({
+            localDate: req.params.date,
+            userId: req.query.userId,
+        }).sort({ createdAt: -1 });
         res.status(200).json(tasks);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET all unique task dates
+// GET all dates with tasks for a user
 router.get('/dates', async (req, res) => {
     try {
-        const dates = await Task.distinct('localDate');
+        if (!req.query.userId) {
+            return res.status(400).json({ message: 'userId query param is required' });
+        }
+        const dates = await Task.distinct('localDate', {
+            userId: req.query.userId,
+        });
         res.status(200).json(dates);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+async function getTask(req, res, next) {
+    let task;
+    try {
+        task = await Task.findById(req.params.id);
+        if (task == null) {
+            return res.status(404).json({ message: 'Cannot find task' });
+        }
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+
+    res.task = task;
+    next();
+}
 
 module.exports = router;

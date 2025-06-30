@@ -7,11 +7,19 @@ const journalSchema = new mongoose.Schema({
     },
     mood: {
         type: String,
-        required: false,
+        required: true,
     },
     localDate: {
         type: String,
         required: true,
+    },
+    userId: {
+        type: String,
+        required: true,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
     },
 }, {
     timestamps: true,

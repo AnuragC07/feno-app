@@ -3,13 +3,16 @@ const router = express.Router();
 const Mood = require('../models/moodModel');
 const moment = require('moment-timezone');
 
-// GET all moods
+// GET all moods for a user
 router.get('/', async (req, res) => {
     try {
-        const moods = await Mood.find({}).sort({ createdAt: -1 });
-        res.status(200).json(moods);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        if (!req.query.userId) {
+            return res.status(400).json({ message: 'userId query param is required' });
+        }
+        const moods = await Mood.find({ userId: req.query.userId }).sort({ createdAt: -1 });
+        res.json(moods);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 
@@ -26,33 +29,37 @@ router.get('/latest', async (req, res) => {
     }
 });
 
-// GET mood by date (YYYY-MM-DD)
+// GET a mood by date for a user
 router.get('/by-date/:date', async (req, res) => {
-    const { date } = req.params;
     try {
-        const mood = await Mood.findOne({ localDate: date });
-        if (!mood) {
-            return res.status(404).json({ message: 'No mood entry for this date' });
+        if (!req.query.userId) {
+            return res.status(400).json({ message: 'userId query param is required' });
         }
-        res.status(200).json(mood);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        const mood = await Mood.findOne({
+            localDate: req.params.date,
+            userId: req.query.userId,
+        });
+        if (mood == null) {
+            return res.status(404).json({ message: 'Cannot find mood for this date' });
+        }
+        res.json(mood);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 
 // POST a new mood
 router.post('/', async (req, res) => {
-    const { mood, localDate } = req.body;
-
-    if (!mood || !localDate) {
-        return res.status(400).json({ error: 'Mood and localDate are required' });
-    }
-
+    const mood = new Mood({
+        mood: req.body.mood,
+        localDate: req.body.localDate,
+        userId: req.body.userId,
+    });
     try {
-        const newMood = await Mood.create({ mood, localDate });
+        const newMood = await mood.save();
         res.status(201).json(newMood);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
     }
 });
 

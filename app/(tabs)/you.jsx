@@ -2,23 +2,32 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import excited from "../../assets/images/excitedmood.png";
 import good from "../../assets/images/goodmood.png";
 import meh from "../../assets/images/mehmood.png";
 import sad from "../../assets/images/sadmood.png";
 import stressful from "../../assets/images/stressfullmood.png";
+import { supabase } from "../lib/supabase";
 
 export default function YouScreen() {
   const [tasks, setTasks] = useState([]);
   const [mood, setMood] = useState(null);
   const [loadingMood, setLoadingMood] = useState(true);
   const [journal, setJournal] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Get today's date in YYYY-MM-DD
   const today = new Date();
@@ -35,11 +44,25 @@ export default function YouScreen() {
   });
 
   useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        setNewUsername(user.user_metadata?.display_name || "");
+      }
+    };
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     const fetchMood = async () => {
       setLoadingMood(true);
       try {
         const res = await fetch(
-          `http://192.168.0.11:8000/api/moods/by-date/${todayStr}`
+          `http://192.168.0.11:8000/api/moods/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setMood(null);
@@ -55,13 +78,14 @@ export default function YouScreen() {
       }
     };
     fetchMood();
-  }, [todayStr]);
+  }, [todayStr, user]);
 
   useEffect(() => {
+    if (!user) return;
     const fetchTasks = async () => {
       try {
         const res = await fetch(
-          `http://192.168.0.11:8000/api/tasks/by-date/${todayStr}`
+          `http://192.168.0.11:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setTasks([]);
@@ -74,13 +98,14 @@ export default function YouScreen() {
       }
     };
     fetchTasks();
-  }, [todayStr]);
+  }, [todayStr, user]);
 
   useEffect(() => {
+    if (!user) return;
     const fetchJournal = async () => {
       try {
         const res = await fetch(
-          `http://192.168.0.11:8000/api/journals/by-date/${todayStr}`
+          `http://192.168.0.11:8000/api/journals/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setJournal(null);
@@ -93,7 +118,7 @@ export default function YouScreen() {
       }
     };
     fetchJournal();
-  }, [todayStr]);
+  }, [todayStr, user]);
 
   const handleDeleteTask = async (id) => {
     try {
@@ -125,16 +150,60 @@ export default function YouScreen() {
 
   const completedCount = tasks.filter((t) => t.done).length;
 
+  const handleUpdateUsername = async () => {
+    if (!newUsername.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Username cannot be empty.",
+        position: "top",
+      });
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.auth.updateUser({
+      data: { display_name: newUsername },
+    });
+
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error updating username",
+        text2: error.message,
+        position: "top",
+      });
+    } else {
+      setUser(data.user);
+      Toast.show({
+        type: "success",
+        text1: "Username updated!",
+        position: "top",
+      });
+      setModalVisible(false);
+    }
+    setLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    setModalVisible(false);
+    await supabase.auth.signOut();
+    Toast.show({
+      type: "success",
+      text1: "Signed out successfully",
+      position: "top",
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.profileHeader}>
-        <Image
-          source={require("../../assets/images/pexels-stefanstefancik-91227.jpg")}
-          style={styles.avatar}
-        />
-        <View>
-          <Text style={styles.greeting}>Hello, Adrian</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>
+            Hello, {user?.user_metadata?.display_name || "there"}
+          </Text>
         </View>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons name="settings-outline" size={24} color="#333" />
+        </TouchableOpacity>
       </View>
       <View style={styles.greeting2}>
         <Text style={styles.date}>{displayDate}</Text>
@@ -257,6 +326,56 @@ export default function YouScreen() {
         </View>
         <Ionicons name="checkmark-done" size={28} color="#222" />
       </View> */}
+
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Settings</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Display Name</Text>
+              <TextInput
+                style={styles.input}
+                value={newUsername}
+                onChangeText={setNewUsername}
+                placeholder="How should we call you?"
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.button,
+                styles.updateButton,
+                loading && styles.buttonDisabled,
+              ]}
+              onPress={handleUpdateUsername}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Updating..." : "Update Username"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.signOutButton]}
+              onPress={handleSignOut}
+            >
+              <Text style={[styles.buttonText, styles.signOutButtonText]}>
+                Sign Out
+              </Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -294,6 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     marginTop: 10,
     fontFamily: "Sora-Bold",
+    marginHorizontal: 8,
   },
   atGlance: {
     fontSize: 14,
@@ -481,5 +601,72 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     marginLeft: 25,
     fontFamily: "Sora-Bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    width: "90%",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: "Sora-Bold",
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#333",
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontFamily: "Ubuntu-Regular",
+    color: "#666",
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    fontFamily: "Ubuntu-Regular",
+    color: "#333",
+  },
+  button: {
+    borderRadius: 10,
+    padding: 15,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  updateButton: {
+    backgroundColor: "#A0472A",
+  },
+  signOutButton: {
+    backgroundColor: "#fde8e8",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "Sora-Bold",
+  },
+  signOutButtonText: {
+    color: "#e53e3e",
   },
 });

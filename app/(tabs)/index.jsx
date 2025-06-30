@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
-import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Circle, Svg } from "react-native-svg";
+import Toast from "react-native-toast-message";
 import excited from "../../assets/images/excitedmood.png";
 import good from "../../assets/images/goodmood.png";
 import meh from "../../assets/images/mehmood.png";
@@ -27,12 +29,23 @@ const MOOD_API_URL = "http://192.168.0.11:8000/api/moods";
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const router = useRouter();
   const [selectedMood, setSelectedMood] = useState(null);
   const [task, setTask] = useState("");
   const [todos, setTodos] = useState([]);
   const [journalContent, setJournalContent] = useState("");
   const [isJournalModalVisible, setJournalModalVisible] = useState(false);
   const [journalMood, setJournalMood] = useState(null);
+
+  // Pomodoro State
+  const [isPomodoroVisible, setPomodoroVisible] = useState(false);
+  const [duration, setDuration] = useState("25");
+  const [timerCount, setTimerCount] = useState(25 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [pomodoroStatus, setPomodoroStatus] = useState("idle"); // idle, running, finished
+
+  const timerRef = useRef(null);
+
   const [fontsLoaded] = useFonts({
     "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
     "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
@@ -48,6 +61,35 @@ export default function Home() {
     };
     getUser();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!timerActive) return;
+
+    timerRef.current = setInterval(() => {
+      setTimerCount((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timerRef.current);
+  }, [timerActive]);
+
+  useEffect(() => {
+    if (timerCount === 0) {
+      clearInterval(timerRef.current);
+      setTimerActive(false);
+      setPomodoroStatus("finished");
+      Toast.show({
+        type: "success",
+        text1: "Timer Finished!",
+        text2: "Great focus session!",
+      });
+    }
+  }, [timerCount]);
 
   const moods = [
     {
@@ -72,13 +114,10 @@ export default function Home() {
     },
   ];
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
   const fetchTasks = async () => {
+    if (!user) return;
     try {
-      const response = await fetch(TASK_API_URL);
+      const response = await fetch(`${TASK_API_URL}?userId=${user.id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch tasks");
       }
@@ -86,7 +125,11 @@ export default function Home() {
       setTodos(data);
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Could not fetch tasks from the server.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not fetch tasks from the server.",
+      });
     }
   };
 
@@ -104,15 +147,23 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ mood: moodLabel, localDate }),
+        body: JSON.stringify({ mood: moodLabel, localDate, userId: user.id }),
       });
       if (!response.ok) {
         throw new Error("Failed to save mood");
       }
-      Alert.alert("Success", "Mood status updated.");
+      Toast.show({
+        type: "success",
+        text1: "Success",
+        text2: "Mood status updated.",
+      });
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Could not save your mood. Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not save your mood. Please try again.",
+      });
       setSelectedMood(null); // Revert UI if the API call fails
     }
   };
@@ -132,7 +183,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ content: task, localDate }), // include localDate
+          body: JSON.stringify({ content: task, localDate, userId: user.id }), // include localDate
         });
         if (!response.ok) {
           throw new Error("Failed to add task");
@@ -141,7 +192,11 @@ export default function Home() {
         fetchTasks(); // Refetch tasks to update the list
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Could not add task.");
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Could not add task.",
+        });
       }
     }
   };
@@ -155,9 +210,12 @@ export default function Home() {
   };
 
   const fetchTodayMood = async () => {
+    if (!user) return;
     const today = getTodayDate();
     try {
-      const response = await fetch(`${MOOD_API_URL}/by-date/${today}`);
+      const response = await fetch(
+        `${MOOD_API_URL}/by-date/${today}?userId=${user.id}`
+      );
       if (!response.ok) {
         setJournalMood(null);
         return;
@@ -191,6 +249,7 @@ export default function Home() {
             content: journalContent,
             mood: journalMood,
             localDate,
+            userId: user.id,
           }),
         });
 
@@ -198,16 +257,26 @@ export default function Home() {
           throw new Error("Failed to save journal entry");
         }
         setJournalContent(""); // Clear input after saving
-        Alert.alert("Success", "Your journal entry has been saved.");
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: "Your journal entry has been saved.",
+        });
       } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Could not save journal entry.");
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Could not save journal entry.",
+        });
       }
     } else {
-      Alert.alert(
-        "Can't Save",
-        "Please make sure your mood is set for today and write something in your journal before saving."
-      );
+      Toast.show({
+        type: "info",
+        text1: "Can't Save",
+        text2:
+          "Please make sure your mood is set for today and write something in your journal before saving.",
+      });
     }
   };
 
@@ -222,7 +291,11 @@ export default function Home() {
       fetchTasks(); // Refetch
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Could not delete task.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not delete task.",
+      });
     }
   };
 
@@ -241,17 +314,65 @@ export default function Home() {
       fetchTasks(); // Refetch
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Could not update task.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not update task.",
+      });
     }
   };
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      Alert.alert("Success", "Signed out successfully!");
+      Toast.show({
+        type: "success",
+        text1: "Success",
+        text2: "Signed out successfully!",
+      });
     } catch (error) {
-      Alert.alert("Error", "Failed to sign out");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to sign out",
+      });
     }
+  };
+
+  const startPomodoro = () => {
+    const mins = parseInt(duration, 10);
+    if (mins > 0) {
+      setPomodoroStatus("running");
+      setTimerCount(mins * 60);
+      setTimerActive(true);
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Duration",
+        text2: "Duration must be greater than 0.",
+      });
+    }
+  };
+
+  const resetPomodoro = () => {
+    clearInterval(timerRef.current);
+    setTimerActive(false);
+    setPomodoroStatus("idle");
+    const mins = parseInt(duration, 10) || 25;
+    setTimerCount(mins * 60);
+  };
+
+  const handleClosePomodoro = () => {
+    resetPomodoro();
+    setPomodoroVisible(false);
+  };
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   if (!fontsLoaded) {
@@ -259,20 +380,22 @@ export default function Home() {
   }
   return (
     <>
-      <View style={styles.content}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.greet}>
-            <Image
-              source={require("../../assets/images/pexels-stefanstefancik-91227.jpg")}
-              style={styles.logo}
-            />
-            <Text style={styles.title}>Heya, {user?.email || "User"}!</Text>
-            <TouchableOpacity
-              onPress={handleSignOut}
-              style={styles.signOutButton}
-            >
-              <Text style={styles.signOutText}>Sign Out</Text>
-            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>
+                Heya, {user?.user_metadata?.display_name || "User"}!
+              </Text>
+              {!user?.user_metadata?.display_name && user && (
+                <TouchableOpacity onPress={() => router.push("/(tabs)/you")}>
+                  <View style={styles.editUsernameContainer}>
+                    <Ionicons name="pencil-outline" size={16} color="#916354" />
+                    <Text style={styles.editUsernameText}>Set a username</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           <View style={styles.moodTracker}>
             <Text style={styles.moodask}>How are you feeling today?</Text>
@@ -315,6 +438,7 @@ export default function Home() {
           <ScrollView
             style={styles.tasksList}
             showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
           >
             {todos.map((todo) => (
               <View key={todo._id} style={styles.todoItem}>
@@ -352,6 +476,18 @@ export default function Home() {
             ))}
           </ScrollView>
         </View>
+
+        <Pressable
+          style={styles.journalTriggerContainer}
+          onPress={() => setPomodoroVisible(true)}
+        >
+          <Text style={styles.journalTriggerTitle}>
+            Lets do things one at a time
+          </Text>
+          <Text style={styles.journalTriggerSubtitle}>
+            Pomodoro timer for your tasks
+          </Text>
+        </Pressable>
 
         {/* Journal Entry Section - Now a Modal Trigger */}
         <Pressable
@@ -404,18 +540,6 @@ export default function Home() {
                 </View>
               </View>
 
-              {/* <View style={styles.journalQuote}>
-                <View style={styles.quoteIconWrapper}>
-                  <Image
-                    source={require("../assets/images/quotepng.png")}
-                    style={styles.quotes}
-                  />
-                </View>
-                <Text style={styles.quoteTitle}>
-                  Your thoughts matter, let them flow
-                </Text>
-              </View> */}
-
               <View style={styles.journalContentArea}>
                 <View style={styles.journalInputContainer}>
                   <TextInput
@@ -466,12 +590,114 @@ export default function Home() {
             </View>
           </View>
         </Modal>
-      </View>
+      </ScrollView>
+
+      {/* Pomodoro Modal */}
+      <Modal
+        visible={isPomodoroVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={handleClosePomodoro}
+      >
+        <View style={styles.pomodoroContainer}>
+          <TouchableOpacity
+            style={styles.pomodoroCloseButton}
+            onPress={handleClosePomodoro}
+          >
+            <Ionicons name="close" size={32} color="#333" />
+          </TouchableOpacity>
+
+          {pomodoroStatus === "idle" && (
+            <View style={styles.pomodoroSettings}>
+              <Text style={styles.pomodoroTitle}>Focus Timer</Text>
+              <View style={styles.pomodoroInputGroup}>
+                <Text style={styles.pomodoroLabel}>Duration (minutes)</Text>
+                <TextInput
+                  style={styles.pomodoroInput}
+                  value={duration}
+                  onChangeText={setDuration}
+                  keyboardType="numeric"
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.pomodoroStartButton}
+                onPress={startPomodoro}
+              >
+                <Text style={styles.pomodoroStartButtonText}>
+                  Start Focusing
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {pomodoroStatus === "running" && (
+            <View style={styles.pomodoroTimer}>
+              <Text style={styles.pomodoroSessionText}>Focusing...</Text>
+              <View style={styles.timerWrapper}>
+                <Svg width={300} height={300} viewBox="0 0 300 300">
+                  <Circle
+                    cx="150"
+                    cy="150"
+                    r="140"
+                    stroke="#e6e6e6"
+                    strokeWidth="15"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="150"
+                    cy="150"
+                    r="140"
+                    stroke="#A0472A"
+                    strokeWidth="15"
+                    fill="none"
+                    strokeDasharray={2 * Math.PI * 140}
+                    strokeDashoffset={
+                      2 *
+                      Math.PI *
+                      140 *
+                      (1 - timerCount / ((parseInt(duration, 10) || 25) * 60))
+                    }
+                    strokeLinecap="round"
+                    transform="rotate(-90 150 150)"
+                  />
+                </Svg>
+                <Text style={styles.timerText}>{formatTime(timerCount)}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pomodoroResetButton}
+                onPress={resetPomodoro}
+              >
+                <Text style={styles.pomodoroResetButtonText}>Stop & Reset</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {pomodoroStatus === "finished" && (
+            <View style={styles.pomodoroFinished}>
+              <Text style={styles.pomodoroFinishedText}>
+                Great focus session!
+              </Text>
+              <TouchableOpacity
+                style={styles.pomodoroStartButton}
+                onPress={resetPomodoro}
+              >
+                <Text style={styles.pomodoroStartButtonText}>
+                  Set Another Timer
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "white",
+    flex: 1,
+  },
   content: {
     padding: 0,
     backgroundColor: "white",
@@ -481,6 +707,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 20,
+    alignItems: "center",
   },
   header: {
     backgroundColor: "#ffe6de",
@@ -497,7 +724,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     fontFamily: "Sora-Bold",
-    marginBottom: 10,
     marginTop: 2,
   },
   tasktitle: {
@@ -545,8 +771,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   moodLabelContainer: {
-    // borderWidth: 2,
-    // borderColor: "red",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -556,12 +780,6 @@ const styles = StyleSheet.create({
   moodEmoji: {
     fontSize: 28,
   },
-  // moodLabel: {
-  //   fontSize: 12,
-  //   marginTop: 4,
-  //   color: "#333",
-  // },
-
   tasksContainer: {
     padding: 20,
   },
@@ -594,10 +812,8 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   tasksList: {
-    maxHeight: 300,
+    maxHeight: 185,
     minHeight: 170,
-    // borderWidth: 2,
-    // borderColor: "red",
   },
   todoItem: {
     flexDirection: "row",
@@ -626,8 +842,6 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 8,
   },
-
-  // Styles for the Modal Trigger
   journalTriggerContainer: {
     borderRadius: 20,
     marginHorizontal: 20,
@@ -647,80 +861,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 5,
   },
-
-  // Styles for the Modal
-  // modalOverlay: {
-  //   flex: 1,
-  //   justifyContent: "center",
-  //   alignItems: "center",
-  //   backgroundColor: "rgba(0, 0, 0, 0.5)",
-  // },
-  // journalEntryContainer: {
-  //   borderTopLeftRadius: 20,
-  //   borderTopRightRadius: 20,
-  //   marginHorizontal: 20,
-  //   backgroundColor: "#FFC7B5",
-  //   padding: 20,
-  //   height: "70%",
-  //   marginTop: "400",
-  //   width: "100%",
-  // },
-  // closeButton: {
-  //   position: "absolute",
-  //   top: 10,
-  //   right: 10,
-  // },
-  // journalTitle: {
-  //   color: "#A0472A",
-  //   fontSize: 20,
-  //   fontWeight: "600",
-  //   marginBottom: 10,
-  //   marginTop: 4,
-  //   marginLeft: 4,
-  // },
-  // journalQuote: {
-  //   display: "flex",
-  //   flexDirection: "row",
-  //   gap: 8,
-  //   paddingHorizontal: 8,
-  //   marginTop: 10,
-  // },
-  // quoteTitle: {
-  //   color: "#D1613D",
-  //   fontSize: 20,
-  //   fontWeight: "400",
-  //   marginBottom: 10,
-  //   marginTop: 4,
-  //   marginLeft: 4,
-  //   fontStyle: "italic",
-  // },
-  // journalInputContainer: {
-  //   display: "flex",
-  //   flexDirection: "row",
-  //   justifyContent: "space-between",
-  //   paddingLeft: 10,
-  //   minHeight: 100, // Increased height for multiline
-  //   backgroundColor: "#F8D6CC",
-  //   alignItems: "flex-start", // Align items to the top
-  //   borderRadius: 20,
-  //   paddingRight: 10,
-  //   paddingTop: 10, // Add padding to the top
-  // },
-  // journalInputSendBtn: {
-  //   backgroundColor: "#ECC1B3",
-  //   width: 40,
-  //   height: 40,
-  //   display: "flex",
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  //   borderRadius: 50,
-  // },
-
-  //
-
   modalOverlay: {
     flex: 1,
-    // backgroundColor: "rgba(0, 0, 0, 0.65)",
     justifyContent: "flex-end",
   },
   journalEntryContainer: {
@@ -754,18 +896,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    // backgroundColor: "rgba(160, 71, 42, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
-    // shadowColor: "#A0472A",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 3,
   },
   closeButtonPressed: {
     backgroundColor: "rgba(160, 71, 42, 0.2)",
@@ -798,13 +931,7 @@ const styles = StyleSheet.create({
   moodBadge: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor: "rgba(255, 199, 181, 0.25)",
-    // paddingHorizontal: 16,
-    // paddingVertical: 10,
-    // borderRadius: 20,
     alignSelf: "flex-start",
-    // borderWidth: 1,
-    // borderColor: "rgba(160, 71, 42, 0.1)",
   },
   moodLabel: {
     fontWeight: "600",
@@ -861,14 +988,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "rgba(160, 71, 42, 0.08)",
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.05,
-    // shadowRadius: 8,
-    // elevation: 2,
     marginBottom: 10,
   },
   journalTextInput: {
@@ -941,12 +1060,112 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  signOutButton: {
+  editUsernameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
+  editUsernameText: {
+    color: "#916354",
+    fontFamily: "Ubuntu-Regular",
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
+  pomodoroContainer: {
+    flex: 1,
+    backgroundColor: "#fff8f7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pomodoroCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
     padding: 10,
   },
-  signOutText: {
-    color: "#A0472A",
+  pomodoroSettings: {
+    width: "80%",
+    alignItems: "center",
+  },
+  pomodoroTitle: {
+    fontSize: 32,
+    fontFamily: "Sora-Bold",
+    color: "#333",
+    marginBottom: 40,
+  },
+  pomodoroInputGroup: {
+    marginBottom: 20,
+    width: "100%",
+  },
+  pomodoroLabel: {
+    fontSize: 18,
+    fontFamily: "Ubuntu-Regular",
+    color: "#666",
+    marginBottom: 10,
+  },
+  pomodoroInput: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 18,
+    textAlign: "center",
+    fontFamily: "Sora-Bold",
+    color: "#333",
+  },
+  pomodoroStartButton: {
+    backgroundColor: "#A0472A",
+    paddingVertical: 15,
+    paddingHorizontal: 60,
+    borderRadius: 30,
+    marginTop: 20,
+  },
+  pomodoroStartButtonText: {
+    color: "white",
+    fontSize: 20,
+    fontFamily: "Sora-Bold",
+  },
+  pomodoroTimer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timerWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 40,
+  },
+  timerText: {
+    position: "absolute",
+    fontSize: 64,
+    fontFamily: "Sora-Bold",
+    color: "#333",
+  },
+  pomodoroSessionText: {
+    fontSize: 24,
+    fontFamily: "Ubuntu-Regular",
+    color: "#666",
+    textTransform: "capitalize",
+  },
+  pomodoroResetButton: {
+    marginTop: 20,
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+  },
+  pomodoroResetButtonText: {
+    color: "#333",
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Sora-Bold",
+  },
+  pomodoroFinished: {
+    alignItems: "center",
+  },
+  pomodoroFinishedText: {
+    fontSize: 28,
+    fontFamily: "Sora-Bold",
+    color: "#333",
+    marginBottom: 40,
+    textAlign: "center",
   },
 });

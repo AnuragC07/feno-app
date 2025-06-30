@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { Defs, LinearGradient, Path, Stop, Svg } from "react-native-svg";
+import Toast from "react-native-toast-message";
 import { supabase } from "../lib/supabase";
 
 const { width, height } = Dimensions.get("window");
@@ -156,10 +157,13 @@ export default function AuthScreen() {
 
       if (result.data?.user) {
         console.log("✅ Auth successful, user:", result.data.user.email);
-        Alert.alert(
-          "Success",
-          `${mode === "signin" ? "Signed in" : "Signed up"} successfully!`
-        );
+        Toast.show({
+          type: "success",
+          text1: "Success",
+          text2: `${
+            mode === "signin" ? "Signed in" : "Signed up"
+          } successfully!`,
+        });
         router.replace("/(tabs)");
       } else {
         console.log("❌ No user data returned");

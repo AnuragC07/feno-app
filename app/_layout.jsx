@@ -1,5 +1,6 @@
 import { Slot } from "expo-router";
 import React from "react";
+import Toast from "react-native-toast-message";
 
 export const unstable_settings = {
   initialRouteName: "tabs",
@@ -10,5 +11,10 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  return <Slot />;
+  return (
+    <>
+      <Slot />
+      <Toast />
+    </>
+  );
 }

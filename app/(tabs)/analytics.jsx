@@ -3,7 +3,6 @@ import { useFonts } from "expo-font";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +13,8 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import { supabase } from "../lib/supabase";
 
 const API_BASE = "http://192.168.0.11:8000/api"; // Change if needed
 
@@ -32,18 +33,35 @@ export default function AnalyticsScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingDates, setLoadingDates] = useState(true);
   const [journalModalVisible, setJournalModalVisible] = useState(false);
-  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [confirmJournalDeleteVisible, setConfirmJournalDeleteVisible] =
+    useState(false);
+  const [confirmTodoDeleteVisible, setConfirmTodoDeleteVisible] =
+    useState(false);
+  const [todoIdToDelete, setTodoIdToDelete] = useState(null);
   const [fontsLoaded] = useFonts({
     "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
     "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
   });
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
   // Fetch all dates with todos and journals for calendar dots
   const fetchDates = useCallback(async () => {
+    if (!user) return;
     setLoadingDates(true);
     try {
       const [todoRes, journalRes] = await Promise.all([
-        fetch(`${API_BASE}/tasks/dates`),
-        fetch(`${API_BASE}/journals/dates`),
+        fetch(`${API_BASE}/tasks/dates?userId=${user.id}`),
+        fetch(`${API_BASE}/journals/dates?userId=${user.id}`),
       ]);
       let todoDatesRaw = await todoRes.json();
       let journalDatesRaw = await journalRes.json();
@@ -63,34 +81,38 @@ export default function AnalyticsScreen() {
     } finally {
       setLoadingDates(false);
     }
-  }, []);
+  }, [user]);
 
   // Fetch todos and journal for selected date
-  const fetchDataForDate = useCallback(async (date) => {
-    setLoading(true);
-    try {
-      const [todosRes, journalRes] = await Promise.all([
-        fetch(`${API_BASE}/tasks/by-date/${date}`),
-        fetch(`${API_BASE}/journals/by-date/${date}`),
-      ]);
-      let todosRaw = await todosRes.json();
-      let journal = null;
-      if (journalRes.status === 200) {
-        journal = await journalRes.json();
+  const fetchDataForDate = useCallback(
+    async (date) => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const [todosRes, journalRes] = await Promise.all([
+          fetch(`${API_BASE}/tasks/by-date/${date}?userId=${user.id}`),
+          fetch(`${API_BASE}/journals/by-date/${date}?userId=${user.id}`),
+        ]);
+        let todosRaw = await todosRes.json();
+        let journal = null;
+        if (journalRes.status === 200) {
+          journal = await journalRes.json();
+        }
+        const todos = Array.isArray(todosRaw) ? todosRaw : [];
+        setTodos(todos);
+        setJournal(journal);
+        // console.log("todos", todos);
+        // console.log("journal", journal);
+      } catch (e) {
+        setTodos([]);
+        setJournal(null);
+        // console.log("Error fetching data for date", e);
+      } finally {
+        setLoading(false);
       }
-      const todos = Array.isArray(todosRaw) ? todosRaw : [];
-      setTodos(todos);
-      setJournal(journal);
-      // console.log("todos", todos);
-      // console.log("journal", journal);
-    } catch (e) {
-      setTodos([]);
-      setJournal(null);
-      // console.log("Error fetching data for date", e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [user]
+  );
 
   useEffect(() => {
     fetchDates();
@@ -134,6 +156,8 @@ export default function AnalyticsScreen() {
       marked[selectedDate] = {
         selected: true,
         selectedColor: "#2d4150",
+        disableTouchEvent: true,
+        selectedTextColor: "white",
       };
     }
 
@@ -154,42 +178,61 @@ export default function AnalyticsScreen() {
 
   // Delete todo
   const deleteTodo = (id) => {
-    Alert.alert("Delete Todo", "Are you sure you want to delete this todo?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await fetch(`${API_BASE}/tasks/${id}`, { method: "DELETE" });
-            fetchDataForDate(selectedDate);
-            fetchDates();
-          } catch (e) {}
-        },
-      },
-    ]);
+    setTodoIdToDelete(id);
+    setConfirmTodoDeleteVisible(true);
+  };
+
+  const confirmDeleteTodo = async () => {
+    if (!todoIdToDelete) return;
+    try {
+      await fetch(`${API_BASE}/tasks/${todoIdToDelete}`, { method: "DELETE" });
+      fetchDataForDate(selectedDate);
+      fetchDates();
+      Toast.show({
+        type: "success",
+        text1: "Todo Deleted",
+      });
+    } catch (e) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not delete todo.",
+      });
+    } finally {
+      setTodoIdToDelete(null);
+      setConfirmTodoDeleteVisible(false);
+    }
   };
 
   // Delete journal
-  const deleteJournal = (id) => {
-    Alert.alert(
-      "Delete Journal",
-      "Are you sure you want to delete this journal entry?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await fetch(`${API_BASE}/journals/${id}`, { method: "DELETE" });
-              fetchDataForDate(selectedDate);
-              fetchDates();
-            } catch (e) {}
-          },
-        },
-      ]
-    );
+  const handleDeleteJournal = () => {
+    if (journal && journal._id) {
+      setConfirmJournalDeleteVisible(true);
+    }
+  };
+
+  const confirmDeleteJournal = async () => {
+    setConfirmJournalDeleteVisible(false);
+    if (journal && journal._id) {
+      try {
+        await fetch(`${API_BASE}/journals/${journal._id}`, {
+          method: "DELETE",
+        });
+        setJournalModalVisible(false);
+        fetchDataForDate(selectedDate);
+        fetchDates();
+        Toast.show({
+          type: "success",
+          text1: "Journal entry deleted.",
+        });
+      } catch (e) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Could not delete journal entry.",
+        });
+      }
+    }
   };
 
   const formatDate = (dateString) => {
@@ -202,25 +245,6 @@ export default function AnalyticsScreen() {
     });
   };
 
-  const handleDeleteJournal = () => {
-    if (journal && journal._id) {
-      setConfirmDeleteVisible(true);
-    }
-  };
-
-  const confirmDeleteJournal = async () => {
-    setConfirmDeleteVisible(false);
-    if (journal && journal._id) {
-      try {
-        await fetch(`${API_BASE}/journals/${journal._id}`, {
-          method: "DELETE",
-        });
-        setJournalModalVisible(false);
-        fetchDataForDate(selectedDate);
-        fetchDates();
-      } catch (e) {}
-    }
-  };
   if (!fontsLoaded) {
     return null; // or <AppLoading />
   }
@@ -480,26 +504,41 @@ export default function AnalyticsScreen() {
       </Modal>
       {/* Confirm Delete Modal */}
       <Modal
-        visible={confirmDeleteVisible}
+        visible={confirmJournalDeleteVisible || confirmTodoDeleteVisible}
         animationType="fade"
         transparent={true}
-        onRequestClose={() => setConfirmDeleteVisible(false)}
+        onRequestClose={() => {
+          setConfirmJournalDeleteVisible(false);
+          setConfirmTodoDeleteVisible(false);
+        }}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.centeredModalOverlay}>
           <View style={styles.confirmModalContent}>
+            <Text style={styles.confirmTitle}>
+              {confirmTodoDeleteVisible ? "Delete Todo" : "Delete Journal"}
+            </Text>
             <Text style={styles.confirmText}>
-              Are you sure you want to delete this journal entry?
+              Are you sure you want to delete this{" "}
+              {confirmTodoDeleteVisible ? "todo" : "journal entry"}?
             </Text>
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setConfirmDeleteVisible(false)}
+                onPress={() => {
+                  setConfirmJournalDeleteVisible(false);
+                  setConfirmTodoDeleteVisible(false);
+                  setTodoIdToDelete(null);
+                }}
               >
-                <Text style={styles.cancelButtonText}>Nope</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={confirmDeleteJournal}
+                style={styles.confirmDeleteButton}
+                onPress={
+                  confirmTodoDeleteVisible
+                    ? confirmDeleteTodo
+                    : confirmDeleteJournal
+                }
               >
                 <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
@@ -694,6 +733,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
+  centeredModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
   modalContent: {
     backgroundColor: "white",
     borderTopLeftRadius: 32,
@@ -820,40 +865,56 @@ const styles = StyleSheet.create({
   },
   confirmModalContent: {
     backgroundColor: "#fff",
-    borderRadius: 15,
+    borderRadius: 20,
     padding: 24,
-    width: "100%",
+    width: "85%",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  confirmText: {
-    fontSize: 16,
-    color: "#2d3748",
-    marginBottom: 20,
+  confirmTitle: {
+    fontSize: 22,
+    color: "#1a202c",
+    marginBottom: 8,
     textAlign: "center",
     fontFamily: "Sora-Bold",
   },
+  confirmText: {
+    fontSize: 16,
+    color: "#4a5568",
+    marginBottom: 24,
+    textAlign: "center",
+    fontFamily: "Ubuntu-Regular",
+  },
   confirmButtons: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     width: "100%",
   },
   cancelButton: {
-    // backgroundColor: "#e53e3e",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flex: 1,
     marginRight: 10,
+    alignItems: "center",
   },
   cancelButtonText: {
     color: "#718096",
     fontSize: 16,
-    fontWeight: "600",
     fontFamily: "Sora-Bold",
+  },
+  confirmDeleteButton: {
+    backgroundColor: "#fff1f1",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: "center",
   },
 
   //
