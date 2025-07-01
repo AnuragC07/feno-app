@@ -1,135 +1,202 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import {
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import Toast from "react-native-toast-message";
-import excited from "../../assets/images/excitedmood.png";
-import good from "../../assets/images/goodmood.png";
-import meh from "../../assets/images/mehmood.png";
-import sad from "../../assets/images/sadmood.png";
-import stressful from "../../assets/images/stressfullmood.png";
-import { supabase } from "../lib/supabase";
+"use client"
+
+import { Ionicons } from "@expo/vector-icons"
+import { useEffect, useState } from "react"
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import Toast from "react-native-toast-message"
+import excited from "../../assets/images/excitedmood.png"
+import good from "../../assets/images/goodmood.png"
+import meh from "../../assets/images/mehmood.png"
+import sad from "../../assets/images/sadmood.png"
+import stressful from "../../assets/images/stressfullmood.png"
+import { supabase } from "../lib/supabase"
+
+// Enhanced color palette (consistent with other screens)
+const colors = {
+  primary: {
+    50: "#fef7f0",
+    100: "#feeee0",
+    200: "#fdd9c1",
+    300: "#fbbf96",
+    400: "#f89d69",
+    500: "#f47c3c",
+    600: "#e55a1f",
+    700: "#c44518",
+    800: "#9d3818",
+    900: "#7f2f17",
+  },
+  secondary: {
+    50: "#f8f6f4",
+    100: "#f0ebe6",
+    200: "#e0d5cc",
+    300: "#cbb8a8",
+    400: "#b59985",
+    500: "#a0826c",
+    600: "#916354",
+    700: "#785347",
+    800: "#62453d",
+    900: "#523a35",
+  },
+  success: {
+    50: "#f0fdf4",
+    100: "#dcfce7",
+    200: "#bbf7d0",
+    300: "#86efac",
+    400: "#4ade80",
+    500: "#22c55e",
+    600: "#16a34a",
+    700: "#15803d",
+    800: "#166534",
+    900: "#14532d",
+  },
+  error: {
+    50: "#fef2f2",
+    100: "#fee2e2",
+    200: "#fecaca",
+    300: "#fca5a5",
+    400: "#f87171",
+    500: "#ef4444",
+    600: "#dc2626",
+    700: "#b91c1c",
+    800: "#991b1b",
+    900: "#7f1d1d",
+  },
+  neutral: {
+    50: "#fafafa",
+    100: "#f5f5f5",
+    200: "#e5e5e5",
+    300: "#d4d4d4",
+    400: "#a3a3a3",
+    500: "#737373",
+    600: "#525252",
+    700: "#404040",
+    800: "#262626",
+    900: "#171717",
+  },
+  accent: {
+    gold: "#C2A94B",
+    coral: "#A0472A",
+    peach: "#FFC7B5",
+    sage: "#B6D7A8",
+    lightPeach: "#fff8f7",
+  },
+}
 
 export default function YouScreen() {
-  const [tasks, setTasks] = useState([]);
-  const [mood, setMood] = useState(null);
-  const [loadingMood, setLoadingMood] = useState(true);
-  const [journal, setJournal] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState([])
+  const [mood, setMood] = useState(null)
+  const [loadingMood, setLoadingMood] = useState(true)
+  const [journal, setJournal] = useState(null)
+  const [user, setUser] = useState(null)
+  const [isModalVisible, setModalVisible] = useState(false)
+  const [newUsername, setNewUsername] = useState("")
+  const [loading, setLoading] = useState(false)
 
   // Get today's date in YYYY-MM-DD
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  const todayStr = `${yyyy}-${mm}-${dd}`;
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, "0")
+  const dd = String(today.getDate()).padStart(2, "0")
+  const todayStr = `${yyyy}-${mm}-${dd}`
 
   // For display: e.g. 22nd June, 2025
   const displayDate = today.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
+  })
 
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      } = await supabase.auth.getUser()
+      setUser(user)
       if (user) {
-        setNewUsername(user.user_metadata?.display_name || "");
+        setNewUsername(user.user_metadata?.display_name || "")
       }
-    };
-    getUser();
-  }, []);
+    }
+    getUser()
+  }, [])
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
     const fetchMood = async () => {
-      setLoadingMood(true);
+      setLoadingMood(true)
       try {
-        const res = await fetch(
-          `http://192.168.0.11:8000/api/moods/by-date/${todayStr}?userId=${user.id}`
-        );
+        const res = await fetch(`http://192.168.0.11:8000/api/moods/by-date/${todayStr}?userId=${user.id}`)
         if (!res.ok) {
-          setMood(null);
+          setMood(null)
         } else {
-          const data = await res.json();
-          console.log("Fetched mood data:", data);
-          setMood(data);
+          const data = await res.json()
+          setMood(data)
         }
       } catch (e) {
-        setMood(null);
+        setMood(null)
       } finally {
-        setLoadingMood(false);
+        setLoadingMood(false)
       }
-    };
-    fetchMood();
-  }, [todayStr, user]);
+    }
+    fetchMood()
+  }, [todayStr, user])
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
     const fetchTasks = async () => {
       try {
-        const res = await fetch(
-          `http://192.168.0.11:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`
-        );
+        const res = await fetch(`http://192.168.0.11:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`)
         if (!res.ok) {
-          setTasks([]);
+          setTasks([])
         } else {
-          const data = await res.json();
-          setTasks(data);
+          const data = await res.json()
+          setTasks(data)
         }
       } catch (e) {
-        setTasks([]);
+        setTasks([])
       }
-    };
-    fetchTasks();
-  }, [todayStr, user]);
+    }
+    fetchTasks()
+  }, [todayStr, user])
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
     const fetchJournal = async () => {
       try {
-        const res = await fetch(
-          `http://192.168.0.11:8000/api/journals/by-date/${todayStr}?userId=${user.id}`
-        );
+        const res = await fetch(`http://192.168.0.11:8000/api/journals/by-date/${todayStr}?userId=${user.id}`)
         if (!res.ok) {
-          setJournal(null);
+          setJournal(null)
         } else {
-          const data = await res.json();
-          setJournal(data);
+          const data = await res.json()
+          setJournal(data)
         }
       } catch (e) {
-        setJournal(null);
+        setJournal(null)
       }
-    };
-    fetchJournal();
-  }, [todayStr, user]);
+    }
+    fetchJournal()
+  }, [todayStr, user])
 
   const handleDeleteTask = async (id) => {
     try {
       const res = await fetch(`http://192.168.0.11:8000/api/tasks/${id}`, {
         method: "DELETE",
-      });
+      })
       if (res.ok) {
-        setTasks((prev) => prev.filter((task) => task._id !== id));
+        setTasks((prev) => prev.filter((task) => task._id !== id))
+        Toast.show({
+          type: "success",
+          text1: "Task deleted successfully",
+          position: "bottom",
+        })
       }
-    } catch (e) {}
-  };
+    } catch (e) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to delete task",
+        position: "bottom",
+      })
+    }
+  }
 
   const handleToggleComplete = async (id, currentStatus) => {
     try {
@@ -137,32 +204,27 @@ export default function YouScreen() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: !currentStatus }),
-      });
+      })
       if (res.ok) {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task._id === id ? { ...task, done: !currentStatus } : task
-          )
-        );
+        setTasks((prev) => prev.map((task) => (task._id === id ? { ...task, done: !currentStatus } : task)))
       }
     } catch (e) {}
-  };
-
-  const completedCount = tasks.filter((t) => t.done).length;
+  }
 
   const handleUpdateUsername = async () => {
     if (!newUsername.trim()) {
       Toast.show({
         type: "error",
-        text1: "Username cannot be empty.",
+        text1: "Username cannot be empty",
         position: "top",
-      });
-      return;
+      })
+      return
     }
-    setLoading(true);
+
+    setLoading(true)
     const { data, error } = await supabase.auth.updateUser({
       data: { display_name: newUsername },
-    });
+    })
 
     if (error) {
       Toast.show({
@@ -170,175 +232,202 @@ export default function YouScreen() {
         text1: "Error updating username",
         text2: error.message,
         position: "top",
-      });
+      })
     } else {
-      setUser(data.user);
+      setUser(data.user)
       Toast.show({
         type: "success",
-        text1: "Username updated!",
+        text1: "Username updated successfully!",
         position: "top",
-      });
-      setModalVisible(false);
+      })
+      setModalVisible(false)
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const handleSignOut = async () => {
-    setModalVisible(false);
-    await supabase.auth.signOut();
+    setModalVisible(false)
+    await supabase.auth.signOut()
     Toast.show({
       type: "success",
       text1: "Signed out successfully",
       position: "top",
-    });
-  };
+    })
+  }
+
+  const getMoodEmoji = () => {
+    if (!mood || !mood.mood) return null
+
+    switch (mood.mood) {
+      case "Happy":
+        return good
+      case "Excited":
+        return excited
+      case "Meh":
+        return meh
+      case "Sad":
+        return sad
+      case "Stressful":
+        return stressful
+      default:
+        return null
+    }
+  }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Enhanced Profile Header */}
       <View style={styles.profileHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>
-            Hello, {user?.user_metadata?.display_name || "there"}
-          </Text>
+        <View style={styles.profileInfo}>
+          <Text style={styles.greeting}>Hello, {user?.user_metadata?.display_name || "there"}</Text>
+          <TouchableOpacity style={styles.editNameButton} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
+            <Text style={styles.editNameText}>Edit profile</Text>
+            <Ionicons name="pencil-outline" size={14} color={colors.primary[600]} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons name="settings-outline" size={24} color="#333" />
+        <TouchableOpacity style={styles.settingsButton} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
+          <Ionicons name="settings-outline" size={22} color={colors.neutral[700]} />
         </TouchableOpacity>
       </View>
-      <View style={styles.greeting2}>
-        <Text style={styles.date}>{displayDate}</Text>
-        <Text style={styles.atGlance}>At a glance</Text>
+
+      {/* Enhanced Date Display */}
+      <View style={styles.dateContainer}>
+        <View style={styles.dateContent}>
+          <View style={styles.dateIconContainer}>
+            <Ionicons name="calendar-outline" size={20} color={colors.primary[600]} />
+          </View>
+          <View style={styles.dateTextContainer}>
+            <Text style={styles.date}>{displayDate}</Text>
+            <Text style={styles.atGlance}>Your daily summary</Text>
+          </View>
+        </View>
       </View>
+
+      {/* Fixed Cards Row */}
       <View style={styles.rowCards}>
+        {/* Fixed Mood Card */}
         <View style={styles.moodCard}>
           <View style={styles.moodCardMood}>
-            {mood && mood.mood === "Happy" && (
-              <Image source={good} style={styles.moodEmoji} />
-            )}
-            {mood && mood.mood === "Excited" && (
-              <Image source={excited} style={styles.moodEmoji} />
-            )}
-            {mood && mood.mood === "Meh" && (
-              <Image source={meh} style={styles.moodEmoji} />
-            )}
-            {mood && mood.mood === "Sad" && (
-              <Image source={sad} style={styles.moodEmoji} />
-            )}
-            {mood && mood.mood === "Stressful" && (
-              <Image source={stressful} style={styles.moodEmoji} />
+            {getMoodEmoji() ? (
+              <Image source={getMoodEmoji()} style={styles.moodEmoji} />
+            ) : (
+              <View style={styles.placeholderEmoji}>
+                <Ionicons name="help-circle-outline" size={32} color={colors.neutral[400]} />
+              </View>
             )}
           </View>
           <View style={styles.moodCardText}>
-            <Text style={styles.moodLabel}>
-              {loadingMood
-                ? "..."
-                : mood && mood.mood
-                ? mood.mood
-                : "How are you today?"}
-            </Text>
+            <Text style={styles.moodLabel}>{loadingMood ? "..." : mood && mood.mood ? mood.mood : "Not set"}</Text>
             <Text style={styles.moodSub}>Your mood today</Text>
           </View>
         </View>
+
+        {/* Fixed Quote Card */}
         <View style={styles.quoteCard}>
-          <View style={styles.quoteCardMood}>
-            <Image
-              source={require("../../assets/images/quotepng.png")}
-              style={styles.quotes}
-            />
+          <View style={styles.quoteIconContainer}>
+            <Image source={require("../../assets/images/quotepng.png")} style={styles.quotes} />
           </View>
           <View style={styles.quoteCardText}>
-            <Text style={styles.quoteText}>
-              We write to taste life twice, in the moment and in retrospect.
-            </Text>
+            <Text style={styles.quoteText}>We write to taste life twice, in the moment and in retrospect.</Text>
             <Text style={styles.quoteAuthor}>Anaïs Nin</Text>
           </View>
         </View>
       </View>
 
+      {/* Enhanced Todo Section */}
       <View style={styles.todoSection}>
         <View style={styles.todoHeader}>
-          <Text style={styles.todoTitle}>Things to do</Text>
-          <Text style={styles.todoProgress}>
-            {tasks.filter((t) => t.done).length}/{tasks.length}
-          </Text>
+          <View style={styles.todoTitleContainer}>
+            <View style={styles.todoIconContainer}>
+              <Ionicons name="list-outline" size={20} color={colors.primary[600]} />
+            </View>
+            <Text style={styles.todoTitle}>Things to do</Text>
+          </View>
+          <View style={styles.todoProgressContainer}>
+            <Text style={styles.todoProgress}>
+              {tasks.filter((t) => t.done).length}/{tasks.length}
+            </Text>
+          </View>
         </View>
-        <ScrollView
-          style={styles.tasksList}
-          showsVerticalScrollIndicator={true}
-        >
-          {tasks.map((task, idx) => (
-            <View style={styles.todoItem} key={task._id || idx}>
-              <Text style={[styles.todoText, task.done && styles.todoDone]}>
-                {task.content}
-              </Text>
-              <Pressable
-                style={styles.checkbox}
-                onPress={() => handleToggleComplete(task._id, task.done)}
-              >
-                <Ionicons
-                  name={
-                    task.done ? "checkmark-circle" : "checkmark-circle-outline"
-                  }
-                  size={22}
-                  color={task.done ? "#4CAF50" : "#ccc"}
-                />
-              </Pressable>
-              <Pressable
-                style={styles.checkbox}
-                onPress={() => handleDeleteTask(task._id)}
-              >
-                <Ionicons name="trash-outline" size={22} color="#ccc" />
-              </Pressable>
-            </View>
-          ))}
-        </ScrollView>
 
-        {journal && (
-          <>
-            <Text style={styles.journalTitle}>Reflections for today</Text>
-            <View
-              style={[styles.journalCard, { marginTop: 8, marginBottom: 0 }]}
-            >
-              <Image
-                source={require("../../assets/images/quotepng.png")}
-                style={styles.quotes}
-              />
-              <Text style={styles.journalText}>{journal.content}</Text>
-            </View>
-          </>
+        {tasks.length > 0 ? (
+          <ScrollView style={styles.tasksList} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+            {tasks.map((task, idx) => (
+              <View style={styles.todoItem} key={task._id || idx}>
+                <Text style={[styles.todoText, task.done && styles.todoDone]}>{task.content}</Text>
+                <View style={styles.todoActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleToggleComplete(task._id, task.done)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={task.done ? "checkmark-circle" : "checkmark-circle-outline"}
+                      size={22}
+                      color={task.done ? colors.success[500] : colors.neutral[400]}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleDeleteTask(task._id)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyTasksContainer}>
+            <Ionicons name="clipboard-outline" size={40} color={colors.neutral[300]} />
+            <Text style={styles.emptyTasksText}>No tasks for today</Text>
+            <Text style={styles.emptyTasksSubtext}>Add tasks from the home screen</Text>
+          </View>
         )}
       </View>
 
-      {/* <View style={styles.journalCard}>
-        <Image
-          source={require("../assets/images/quotepng.png")}
-          style={styles.quotes}
-        />
-        <Text style={styles.journalText}>
-          {journal ? journal.content : "No journal entry for today."}
-        </Text>
-      </View> */}
-
-      {/* <View style={styles.bottomNav}>
-        <Ionicons name="home" size={28} color="#222" />
-        <View style={styles.navCenter}>
-          <Ionicons name="apps" size={28} color="#fff" />
+      {/* Enhanced Journal Section */}
+      {journal && (
+        <View style={styles.journalSection}>
+          <View style={styles.journalHeader}>
+            <View style={styles.journalTitleContainer}>
+              <View style={styles.journalIconContainer}>
+                <Ionicons name="book-outline" size={20} color={colors.accent.coral} />
+              </View>
+              <Text style={styles.journalTitle}>Today's Reflection</Text>
+            </View>
+          </View>
+          <View style={styles.journalCard}>
+            <View style={styles.journalQuoteContainer}>
+              <Image source={require("../../assets/images/quotepng.png")} style={styles.journalQuoteIcon} />
+            </View>
+            <Text style={styles.journalText}>{journal.content}</Text>
+          </View>
         </View>
-        <Ionicons name="checkmark-done" size={28} color="#222" />
-      </View> */}
+      )}
 
+      <View style={styles.bottomSpacing} />
+
+      {/* Enhanced Settings Modal */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Settings</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Profile Settings</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={24} color={colors.neutral[500]} />
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Display Name</Text>
@@ -347,261 +436,388 @@ export default function YouScreen() {
                 value={newUsername}
                 onChangeText={setNewUsername}
                 placeholder="How should we call you?"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.neutral[400]}
               />
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.button,
-                styles.updateButton,
-                loading && styles.buttonDisabled,
-              ]}
+              style={[styles.button, styles.updateButton, loading && styles.buttonDisabled]}
               onPress={handleUpdateUsername}
               disabled={loading}
+              activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>
-                {loading ? "Updating..." : "Update Username"}
-              </Text>
+              <Text style={styles.buttonText}>{loading ? "Updating..." : "Update Username"}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.signOutButton]}
-              onPress={handleSignOut}
-            >
-              <Text style={[styles.buttonText, styles.signOutButtonText]}>
-                Sign Out
-              </Text>
+            <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut} activeOpacity={0.8}>
+              <Ionicons name="log-out-outline" size={20} color={colors.error[600]} style={styles.buttonIcon} />
+              <Text style={[styles.buttonText, styles.signOutButtonText]}>Sign Out</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
-  );
+    </ScrollView>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 0,
+    backgroundColor: colors.neutral[50],
   },
+
+  // Enhanced Profile Header
   profileHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    paddingBottom: 10,
-    marginTop: 20,
-    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 16,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 24,
-    marginRight: 10,
+  profileInfo: {
+    flex: 1,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: "600",
-    marginBottom: 2,
+    fontSize: 28,
+    color: colors.neutral[800],
+    marginBottom: 4,
     fontFamily: "Sora-Bold",
+    letterSpacing: -0.5,
+  },
+  editNameButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+  },
+  editNameText: {
+    fontSize: 14,
+    color: colors.primary[600],
+    marginRight: 4,
+    fontFamily: "Ubuntu-Regular",
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.neutral[100],
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.neutral[400],
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // Enhanced Date Display
+  dateContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  dateContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dateIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary[100],
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  dateTextContainer: {
+    flex: 1,
   },
   date: {
     fontSize: 18,
-    color: "black",
-    fontWeight: 600,
+    color: colors.neutral[800],
     marginBottom: 2,
-    marginTop: 10,
     fontFamily: "Sora-Bold",
-    marginHorizontal: 8,
   },
   atGlance: {
     fontSize: 14,
-    color: "gray",
+    color: colors.neutral[500],
     fontFamily: "Ubuntu-Regular",
   },
+
+  // Fixed Cards Row
   rowCards: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 5,
-    gap: 10,
-    marginTop: 15,
+    paddingHorizontal: 24,
+    marginBottom: 24,
+    gap: 12,
   },
+
+  // Fixed Mood Card
   moodCard: {
-    backgroundColor: "#fff8f7",
+    backgroundColor: colors.accent.lightPeach,
     borderRadius: 18,
     padding: 16,
     alignItems: "center",
     flex: 1,
-    display: "flex",
-    flexDirection: "col",
-    justifyContent: "space-between",
-    marginRight: 5,
+    height: 140, // Fixed height
+    justifyContent: "center",
+    shadowColor: colors.primary[300],
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.primary[100],
   },
-  moodCardText: {
-    display: "flex",
-    flexDirection: "col",
-    justifyContent: "space-between",
-    alignItems: "center",
+  moodCardMood: {
+    marginBottom: 12,
   },
   moodEmoji: {
-    width: 36,
-    height: 36,
-    marginBottom: 6,
+    width: 40,
+    height: 40,
+  },
+  placeholderEmoji: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.neutral[100],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  moodCardText: {
+    alignItems: "center",
   },
   moodLabel: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#C2A94B",
+    color: colors.accent.gold,
+    marginBottom: 4,
     fontFamily: "Sora-Bold",
+    textAlign: "center",
   },
   moodSub: {
     fontSize: 12,
-    color: "#e0d6bd",
-    fontWeight: 600,
-    marginTop: 2,
+    color: colors.neutral[500],
     fontFamily: "Ubuntu-Regular",
+    textAlign: "center",
   },
+
+  // Fixed Quote Card
   quoteCard: {
-    backgroundColor: "#FFC7B5",
+    backgroundColor: colors.accent.peach,
     borderRadius: 18,
     padding: 16,
     flex: 1.2,
-    marginLeft: 5,
-    justifyContent: "center",
+    height: 140, // Fixed height
+    justifyContent: "space-between",
+    shadowColor: colors.accent.coral,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  moodCardMood: {
-    // borderWidth: 2,
-    // borderColor: "red",
-    marginTop: 20,
+  quoteIconContainer: {
+    alignItems: "flex-start",
+    marginBottom: 8,
   },
-  quoteMark: {
-    fontSize: 22,
-    color: "#D1613D",
-    fontWeight: "bold",
-    marginBottom: 2,
-    fontFamily: "Sora-Bold",
+  quotes: {
+    width: 20,
+    height: 20,
+    tintColor: colors.accent.coral,
+  },
+  quoteCardText: {
+    flex: 1,
+    justifyContent: "space-between",
   },
   quoteText: {
-    fontSize: 14,
-    color: "#A0472A",
-    // fontStyle: "italic",
-    marginBottom: 6,
-    marginTop: 10,
-    // fontWeight: 600,
+    fontSize: 13,
+    color: colors.accent.coral,
+    marginBottom: 8,
     fontFamily: "Ubuntu-Regular",
+    lineHeight: 18,
   },
   quoteAuthor: {
-    fontSize: 12,
-    color: "#c66a4d",
+    fontSize: 11,
+    color: colors.accent.coral,
+    opacity: 0.8,
     alignSelf: "flex-end",
     fontFamily: "Ubuntu-Regular",
+    fontStyle: "italic",
   },
+
+  // Enhanced Todo Section
   todoSection: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    margin: 20,
-    marginTop: 4,
-    marginBottom: 5,
-    padding: 4,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 20,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    padding: 20,
+    shadowColor: colors.neutral[400],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
   },
   todoHeader: {
-    display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  todoTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  todoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary[100],
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
   },
   todoTitle: {
     fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 14,
+    color: colors.neutral[800],
     fontFamily: "Sora-Bold",
+  },
+  todoProgressContainer: {
+    backgroundColor: colors.neutral[100],
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   todoProgress: {
     fontSize: 13,
-    color: "#bbb",
-    marginBottom: 10,
-    alignSelf: "flex-end",
+    color: colors.neutral[600],
     fontFamily: "Ubuntu-Regular",
+  },
+  tasksList: {
+    maxHeight: 180,
+    minHeight: 100,
   },
   todoItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[100],
   },
   todoText: {
     fontSize: 15,
     flex: 1,
-    color: "gray",
+    color: colors.neutral[700],
     fontFamily: "Ubuntu-Regular",
+    lineHeight: 22,
   },
   todoDone: {
-    color: "#B6D7A8",
+    color: colors.accent.sage,
     textDecorationLine: "line-through",
   },
-  checkbox: {
-    marginLeft: 10,
+  todoActions: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  tasksList: {
-    maxHeight: 170,
-    minHeight: 170,
-    // borderWidth: 2,
-    // borderColor: "red",
+  actionButton: {
+    padding: 8,
+    borderRadius: 8,
   },
-  journalCard: {
-    backgroundColor: "#FFC7B5",
-    borderRadius: 18,
-    marginHorizontal: 0,
-    marginBottom: 20,
-    padding: 18,
-    minHeight: 90,
+  emptyTasksContainer: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  emptyTasksText: {
+    fontSize: 16,
+    color: colors.neutral[500],
+    marginTop: 12,
+    marginBottom: 4,
+    fontFamily: "Ubuntu-Regular",
+  },
+  emptyTasksSubtext: {
+    fontSize: 14,
+    color: colors.neutral[400],
+    fontFamily: "Ubuntu-Regular",
+  },
+
+  // Enhanced Journal Section
+  journalSection: {
+    marginHorizontal: 24,
+    marginBottom: 24,
+  },
+  journalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  journalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  journalIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accent.peach,
+    alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
   },
   journalTitle: {
     fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 4,
-    marginTop: 20,
+    color: colors.neutral[800],
     fontFamily: "Sora-Bold",
+  },
+  journalCard: {
+    backgroundColor: colors.accent.peach,
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: colors.accent.coral,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  journalQuoteContainer: {
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  journalQuoteIcon: {
+    width: 20,
+    height: 20,
+    tintColor: colors.accent.coral,
   },
   journalText: {
     fontSize: 15,
-    color: "#A0472A",
+    color: colors.accent.coral,
     fontStyle: "italic",
-    marginTop: 10,
+    lineHeight: 22,
     fontFamily: "Ubuntu-Regular",
   },
-  bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 64,
+
+  // Bottom Spacing
+  bottomSpacing: {
+    height: 32,
   },
-  navCenter: {
-    backgroundColor: "#222",
-    borderRadius: 16,
-    padding: 8,
-    marginHorizontal: 8,
-  },
-  greeting2: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 2,
-    marginLeft: 25,
-    fontFamily: "Sora-Bold",
-  },
+
+  // Enhanced Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -609,64 +825,93 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 25,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 24,
+    padding: 24,
     width: "90%",
-    shadowColor: "#000",
+    shadowColor: colors.neutral[900],
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
   },
   modalTitle: {
     fontSize: 22,
+    color: colors.neutral[800],
     fontFamily: "Sora-Bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#333",
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.neutral[100],
+    alignItems: "center",
+    justifyContent: "center",
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputLabel: {
     fontSize: 16,
-    fontFamily: "Ubuntu-Regular",
-    color: "#666",
+    color: colors.neutral[600],
     marginBottom: 8,
+    fontFamily: "Ubuntu-Regular",
   },
   input: {
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    padding: 15,
+    backgroundColor: colors.neutral[100],
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
+    color: colors.neutral[800],
     fontFamily: "Ubuntu-Regular",
-    color: "#333",
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
   },
   button: {
-    borderRadius: 10,
-    padding: 15,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   updateButton: {
-    backgroundColor: "#A0472A",
+    backgroundColor: colors.primary[600],
+    shadowColor: colors.primary[600],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signOutButton: {
-    backgroundColor: "#fde8e8",
+    backgroundColor: colors.error[50],
+    borderWidth: 1,
+    borderColor: colors.error[200],
   },
   buttonText: {
-    color: "white",
+    color: colors.neutral[50],
     fontSize: 16,
     fontFamily: "Sora-Bold",
   },
   signOutButtonText: {
-    color: "#e53e3e",
+    color: colors.error[600],
   },
-});
+})

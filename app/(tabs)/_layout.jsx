@@ -1,4 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+
 import { Redirect, Tabs } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet } from "react-native";
@@ -58,7 +60,14 @@ export default function TabLayout() {
     ]).start();
   };
 
-  const TabIcon = ({ name, color, focused, size = 30 }) => {
+  const TabIcon = ({
+    name,
+    color,
+    focused,
+    size = 30,
+    iconSet = Ionicons,
+    gradient = false,
+  }) => {
     const iconScale = useRef(new Animated.Value(1)).current;
     const iconOpacity = useRef(new Animated.Value(0.7)).current;
 
@@ -78,23 +87,52 @@ export default function TabLayout() {
       ]).start();
     }, [focused]);
 
-    return (
-      <Animated.View
-        style={[
-          styles.iconContainer,
-          focused && styles.activeIconContainer,
-          {
-            transform: [{ scale: iconScale }],
-            opacity: iconOpacity,
-          },
-        ]}
-      >
+    const iconElement =
+      iconSet === Ionicons ? (
         <Ionicons
           name={name}
           size={size}
           color={focused ? "#fff" : color}
           style={styles.icon}
         />
+      ) : (
+        <MaterialCommunityIcons
+          name={name}
+          size={size}
+          color={focused ? "#fff" : color}
+          style={styles.icon}
+        />
+      );
+
+    if (gradient && focused) {
+      return (
+        <Animated.View
+          style={[
+            styles.iconContainer,
+            { transform: [{ scale: iconScale }], opacity: iconOpacity },
+          ]}
+        >
+          <LinearGradient
+            colors={["#ff6fcb", "#ffb6ea"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBackground}
+          >
+            {iconElement}
+          </LinearGradient>
+        </Animated.View>
+      );
+    }
+
+    return (
+      <Animated.View
+        style={[
+          styles.iconContainer,
+          focused && styles.activeIconContainer,
+          { transform: [{ scale: iconScale }], opacity: iconOpacity },
+        ]}
+      >
+        {iconElement}
       </Animated.View>
     );
   };
@@ -122,6 +160,22 @@ export default function TabLayout() {
                 color={color}
                 focused={focused}
                 size={28}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="sanctuary"
+          options={{
+            title: "Sanctuary",
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon
+                name="brain"
+                color={color}
+                focused={focused}
+                size={28}
+                iconSet={MaterialCommunityIcons}
+                gradient={true}
               />
             ),
           }}
@@ -221,5 +275,13 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.1)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  gradientBackground: {
+    flex: 1,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    width: 48,
+    height: 48,
   },
 });

@@ -1,168 +1,229 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Calendar } from "react-native-calendars";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
-import { supabase } from "../lib/supabase";
+"use client"
 
-const API_BASE = "http://192.168.0.11:8000/api"; // Change if needed
+import { Ionicons } from "@expo/vector-icons"
+import { useFonts } from "expo-font"
+import { useCallback, useEffect, useState } from "react"
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Calendar } from "react-native-calendars"
+import { SafeAreaView } from "react-native-safe-area-context"
+import Toast from "react-native-toast-message"
+import { supabase } from "../lib/supabase"
+
+// Enhanced color palette (consistent with home screen)
+const colors = {
+  primary: {
+    50: "#fef7f0",
+    100: "#feeee0",
+    200: "#fdd9c1",
+    300: "#fbbf96",
+    400: "#f89d69",
+    500: "#f47c3c",
+    600: "#e55a1f",
+    700: "#c44518",
+    800: "#9d3818",
+    900: "#7f2f17",
+  },
+  secondary: {
+    50: "#f8f6f4",
+    100: "#f0ebe6",
+    200: "#e0d5cc",
+    300: "#cbb8a8",
+    400: "#b59985",
+    500: "#a0826c",
+    600: "#916354",
+    700: "#785347",
+    800: "#62453d",
+    900: "#523a35",
+  },
+  success: {
+    50: "#f0fdf4",
+    100: "#dcfce7",
+    200: "#bbf7d0",
+    300: "#86efac",
+    400: "#4ade80",
+    500: "#22c55e",
+    600: "#16a34a",
+    700: "#15803d",
+    800: "#166534",
+    900: "#14532d",
+  },
+  error: {
+    50: "#fef2f2",
+    100: "#fee2e2",
+    200: "#fecaca",
+    300: "#fca5a5",
+    400: "#f87171",
+    500: "#ef4444",
+    600: "#dc2626",
+    700: "#b91c1c",
+    800: "#991b1b",
+    900: "#7f1d1d",
+  },
+  neutral: {
+    50: "#fafafa",
+    100: "#f5f5f5",
+    200: "#e5e5e5",
+    300: "#d4d4d4",
+    400: "#a3a3a3",
+    500: "#737373",
+    600: "#525252",
+    700: "#404040",
+    800: "#262626",
+    900: "#171717",
+  },
+  accent: {
+    blue: "#3b82f6",
+    orange: "#f97316",
+    purple: "#8b5cf6",
+    teal: "#14b8a6",
+  },
+}
+
+const API_BASE = "http://192.168.0.100:8000/api" // Change if needed
 
 export default function AnalyticsScreen() {
   const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  });
-  const [todos, setTodos] = useState([]);
-  const [journal, setJournal] = useState(null);
-  const [todoDates, setTodoDates] = useState([]);
-  const [journalDates, setJournalDates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingDates, setLoadingDates] = useState(true);
-  const [journalModalVisible, setJournalModalVisible] = useState(false);
-  const [confirmJournalDeleteVisible, setConfirmJournalDeleteVisible] =
-    useState(false);
-  const [confirmTodoDeleteVisible, setConfirmTodoDeleteVisible] =
-    useState(false);
-  const [todoIdToDelete, setTodoIdToDelete] = useState(null);
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, "0")
+    const dd = String(today.getDate()).padStart(2, "0")
+    return `${yyyy}-${mm}-${dd}`
+  })
+
+  const [todos, setTodos] = useState([])
+  const [journal, setJournal] = useState(null)
+  const [todoDates, setTodoDates] = useState([])
+  const [journalDates, setJournalDates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadingDates, setLoadingDates] = useState(true)
+  const [journalModalVisible, setJournalModalVisible] = useState(false)
+  const [confirmJournalDeleteVisible, setConfirmJournalDeleteVisible] = useState(false)
+  const [confirmTodoDeleteVisible, setConfirmTodoDeleteVisible] = useState(false)
+  const [todoIdToDelete, setTodoIdToDelete] = useState(null)
+
   const [fontsLoaded] = useFonts({
     "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
     "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
-  });
-  const [user, setUser] = useState(null);
+  })
+
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
+      } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    getUser()
+  }, [])
 
   // Fetch all dates with todos and journals for calendar dots
   const fetchDates = useCallback(async () => {
-    if (!user) return;
-    setLoadingDates(true);
+    if (!user) return
+    setLoadingDates(true)
     try {
       const [todoRes, journalRes] = await Promise.all([
         fetch(`${API_BASE}/tasks/dates?userId=${user.id}`),
         fetch(`${API_BASE}/journals/dates?userId=${user.id}`),
-      ]);
-      let todoDatesRaw = await todoRes.json();
-      let journalDatesRaw = await journalRes.json();
-      const todoDates = Array.isArray(todoDatesRaw) ? todoDatesRaw : [];
-      const journalDates = Array.isArray(journalDatesRaw)
-        ? journalDatesRaw
-        : [];
-      setTodoDates(todoDates);
-      setJournalDates(journalDates);
-      // console.log("todoDates", todoDates);
-      // console.log("journalDates", journalDates);
+      ])
+
+      const todoDatesRaw = await todoRes.json()
+      const journalDatesRaw = await journalRes.json()
+
+      const todoDates = Array.isArray(todoDatesRaw) ? todoDatesRaw : []
+      const journalDates = Array.isArray(journalDatesRaw) ? journalDatesRaw : []
+
+      setTodoDates(todoDates)
+      setJournalDates(journalDates)
     } catch (e) {
-      // handle error
-      setTodoDates([]);
-      setJournalDates([]);
-      // console.log("Error fetching dates", e);
+      setTodoDates([])
+      setJournalDates([])
     } finally {
-      setLoadingDates(false);
+      setLoadingDates(false)
     }
-  }, [user]);
+  }, [user])
 
   // Fetch todos and journal for selected date
   const fetchDataForDate = useCallback(
     async (date) => {
-      if (!user) return;
-      setLoading(true);
+      if (!user) return
+      setLoading(true)
       try {
         const [todosRes, journalRes] = await Promise.all([
           fetch(`${API_BASE}/tasks/by-date/${date}?userId=${user.id}`),
           fetch(`${API_BASE}/journals/by-date/${date}?userId=${user.id}`),
-        ]);
-        let todosRaw = await todosRes.json();
-        let journal = null;
+        ])
+
+        const todosRaw = await todosRes.json()
+        let journal = null
+
         if (journalRes.status === 200) {
-          journal = await journalRes.json();
+          journal = await journalRes.json()
         }
-        const todos = Array.isArray(todosRaw) ? todosRaw : [];
-        setTodos(todos);
-        setJournal(journal);
-        // console.log("todos", todos);
-        // console.log("journal", journal);
+
+        const todos = Array.isArray(todosRaw) ? todosRaw : []
+        setTodos(todos)
+        setJournal(journal)
       } catch (e) {
-        setTodos([]);
-        setJournal(null);
-        // console.log("Error fetching data for date", e);
+        setTodos([])
+        setJournal(null)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
-    [user]
-  );
+    [user],
+  )
 
   useEffect(() => {
-    fetchDates();
-  }, [fetchDates]);
+    fetchDates()
+  }, [fetchDates])
 
   useEffect(() => {
-    fetchDataForDate(selectedDate);
-  }, [selectedDate, fetchDataForDate]);
+    fetchDataForDate(selectedDate)
+  }, [selectedDate, fetchDataForDate])
 
   // Calendar dots logic
   const getMarkedDates = useCallback(() => {
-    const marked = {};
+    const marked = {}
 
     // Add dots for dates with todos
     todoDates.forEach((date) => {
       if (!marked[date]) {
-        marked[date] = { dots: [] };
+        marked[date] = { dots: [] }
       }
       marked[date].dots.push({
-        color: "#007AFF",
+        color: colors.accent.blue,
         selectedDotColor: "#ffffff",
-      });
-    });
+      })
+    })
 
     // Add dots for dates with journals
     journalDates.forEach((date) => {
       if (!marked[date]) {
-        marked[date] = { dots: [] };
+        marked[date] = { dots: [] }
       }
       marked[date].dots.push({
-        color: "#FF8C00",
+        color: colors.accent.orange,
         selectedDotColor: "#ffffff",
-      });
-    });
+      })
+    })
 
     // Mark selected date
     if (marked[selectedDate]) {
-      marked[selectedDate].selected = true;
-      marked[selectedDate].selectedColor = "#ffe6de";
+      marked[selectedDate].selected = true
+      marked[selectedDate].selectedColor = colors.primary[500]
     } else {
       marked[selectedDate] = {
         selected: true,
-        selectedColor: "#2d4150",
+        selectedColor: colors.primary[500],
         disableTouchEvent: true,
         selectedTextColor: "white",
-      };
+      }
     }
 
-    return marked;
-  }, [todoDates, journalDates, selectedDate]);
+    return marked
+  }, [todoDates, journalDates, selectedDate])
 
   // Toggle todo completed
   const toggleTodo = async (id, completed) => {
@@ -171,96 +232,100 @@ export default function AnalyticsScreen() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: !completed }),
-      });
-      fetchDataForDate(selectedDate);
+      })
+      fetchDataForDate(selectedDate)
     } catch (e) {}
-  };
+  }
 
   // Delete todo
   const deleteTodo = (id) => {
-    setTodoIdToDelete(id);
-    setConfirmTodoDeleteVisible(true);
-  };
+    setTodoIdToDelete(id)
+    setConfirmTodoDeleteVisible(true)
+  }
 
   const confirmDeleteTodo = async () => {
-    if (!todoIdToDelete) return;
+    if (!todoIdToDelete) return
+
     try {
-      await fetch(`${API_BASE}/tasks/${todoIdToDelete}`, { method: "DELETE" });
-      fetchDataForDate(selectedDate);
-      fetchDates();
+      await fetch(`${API_BASE}/tasks/${todoIdToDelete}`, { method: "DELETE" })
+      fetchDataForDate(selectedDate)
+      fetchDates()
       Toast.show({
         type: "success",
         text1: "Todo Deleted",
-      });
+      })
     } catch (e) {
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not delete todo.",
-      });
+      })
     } finally {
-      setTodoIdToDelete(null);
-      setConfirmTodoDeleteVisible(false);
+      setTodoIdToDelete(null)
+      setConfirmTodoDeleteVisible(false)
     }
-  };
+  }
 
   // Delete journal
   const handleDeleteJournal = () => {
     if (journal && journal._id) {
-      setConfirmJournalDeleteVisible(true);
+      setConfirmJournalDeleteVisible(true)
     }
-  };
+  }
 
   const confirmDeleteJournal = async () => {
-    setConfirmJournalDeleteVisible(false);
+    setConfirmJournalDeleteVisible(false)
     if (journal && journal._id) {
       try {
         await fetch(`${API_BASE}/journals/${journal._id}`, {
           method: "DELETE",
-        });
-        setJournalModalVisible(false);
-        fetchDataForDate(selectedDate);
-        fetchDates();
+        })
+        setJournalModalVisible(false)
+        fetchDataForDate(selectedDate)
+        fetchDates()
         Toast.show({
           type: "success",
           text1: "Journal entry deleted.",
-        });
+        })
       } catch (e) {
         Toast.show({
           type: "error",
           text1: "Error",
           text2: "Could not delete journal entry.",
-        });
+        })
       }
     }
-  };
+  }
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    });
-  };
+    })
+  }
 
   if (!fontsLoaded) {
-    return null; // or <AppLoading />
+    return null // or <AppLoading />
   }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Enhanced Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Let&apos;s have a look</Text>
-          <Text style={styles.subtitle}>How you&apos;ve been lately</Text>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Your Journey</Text>
+            <Text style={styles.subtitle}>Reflecting on your daily progress</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="analytics-outline" size={32} color={colors.primary[500]} />
+          </View>
         </View>
 
-        {/* Calendar */}
+        {/* Enhanced Calendar */}
         <View style={styles.calendarContainer}>
           <Calendar
             current={selectedDate}
@@ -277,20 +342,20 @@ export default function AnalyticsScreen() {
             disableArrowRight={false}
             disableAllTouchEventsForDisabledDays={true}
             theme={{
-              backgroundColor: "#ffffff",
-              calendarBackground: "#ffffff",
-              textSectionTitleColor: "#916354",
-              selectedDayBackgroundColor: "#4A90E2",
-              selectedDayTextColor: "#ffffff",
-              todayTextColor: "#916354",
-              dayTextColor: "#2d3748",
-              textDisabledColor: "#d9e1e8",
-              dotColor: "#007AFF",
-              selectedDotColor: "#ffffff",
-              arrowColor: "#916354",
-              disabledArrowColor: "#d9e1e8",
-              monthTextColor: "#2d4150",
-              indicatorColor: "#4A90E2",
+              backgroundColor: colors.neutral[50],
+              calendarBackground: colors.neutral[50],
+              textSectionTitleColor: colors.secondary[600],
+              selectedDayBackgroundColor: colors.primary[500],
+              selectedDayTextColor: colors.neutral[50],
+              todayTextColor: colors.primary[600],
+              dayTextColor: colors.neutral[700],
+              textDisabledColor: colors.neutral[300],
+              dotColor: colors.accent.blue,
+              selectedDotColor: colors.neutral[50],
+              arrowColor: colors.primary[500],
+              disabledArrowColor: colors.neutral[300],
+              monthTextColor: colors.neutral[800],
+              indicatorColor: colors.primary[500],
               textDayFontWeight: "500",
               textMonthFontWeight: "600",
               textDayHeaderFontWeight: "600",
@@ -314,122 +379,123 @@ export default function AnalyticsScreen() {
           />
         </View>
 
-        {/* Selected Date Display */}
-        <View style={styles.youContainer}>
+        {/* Enhanced Selected Date Display */}
+        <View style={styles.contentContainer}>
           <View style={styles.dateHeader}>
-            <Text style={styles.selectedDate}>
-              You on {formatDate(selectedDate)}
-            </Text>
-            <View style={styles.legend}>
-              <View style={styles.legendItem}>
-                <View
-                  style={[styles.legendDot, { backgroundColor: "#007AFF" }]}
-                />
-                <Text style={styles.legendText}>Todos</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View
-                  style={[styles.legendDot, { backgroundColor: "#FF8C00" }]}
-                />
-                <Text style={styles.legendText}>Journal</Text>
+            <View style={styles.dateHeaderContent}>
+              <Text style={styles.selectedDate}>Your day on {formatDate(selectedDate)}</Text>
+              <View style={styles.legend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.accent.blue }]} />
+                  <Text style={styles.legendText}>Tasks</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.accent.orange }]} />
+                  <Text style={styles.legendText}>Journal</Text>
+                </View>
               </View>
             </View>
           </View>
 
-          {/* Todos Section */}
+          {/* Enhanced Todos Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Todos ({todos.length})</Text>
+              <View style={styles.sectionTitleContainer}>
+                <View style={styles.sectionIcon}>
+                  <Ionicons name="checkmark-circle-outline" size={24} color={colors.accent.blue} />
+                </View>
+                <Text style={styles.sectionTitle}>Tasks ({todos.length})</Text>
+              </View>
             </View>
+
             <View style={styles.itemsList}>
               {loading ? (
-                <ActivityIndicator size="small" color="#4A90E2" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary[500]} />
+                  <Text style={styles.loadingText}>Loading tasks...</Text>
+                </View>
               ) : todos.length === 0 ? (
-                <Text style={styles.emptyText}>No todos for this date</Text>
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="clipboard-outline" size={48} color={colors.neutral[300]} />
+                  <Text style={styles.emptyText}>No tasks for this date</Text>
+                  <Text style={styles.emptySubtext}>Tasks you create will appear here</Text>
+                </View>
               ) : (
                 todos.map((todo) => (
                   <View key={todo._id} style={styles.todoItem}>
-                    <Text
-                      style={[
-                        styles.todoText,
-                        todo.done && styles.todoTextCompleted,
-                      ]}
-                    >
-                      {todo.content}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.checkbox}
-                      onPress={() => toggleTodo(todo._id, todo.done)}
-                    >
-                      <Ionicons
-                        name={
-                          todo.done
-                            ? "checkmark-circle"
-                            : "checkmark-circle-outline"
-                        }
-                        size={22}
-                        color={todo.done ? "#4CAF50" : "#787878"}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.checkbox}
-                      onPress={() => deleteTodo(todo._id)}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={22}
-                        color="#787878"
-                      />
-                    </TouchableOpacity>
+                    <View style={styles.todoContent}>
+                      <Text style={[styles.todoText, todo.done && styles.todoTextCompleted]}>{todo.content}</Text>
+                    </View>
+                    <View style={styles.todoActions}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => toggleTodo(todo._id, todo.done)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={todo.done ? "checkmark-circle" : "checkmark-circle-outline"}
+                          size={24}
+                          color={todo.done ? colors.success[500] : colors.neutral[400]}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => deleteTodo(todo._id)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               )}
             </View>
           </View>
 
-          {/* Journal Section */}
+          {/* Enhanced Journal Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Journal ({journal ? 1 : 0})
-              </Text>
+              <View style={styles.sectionTitleContainer}>
+                <View style={styles.sectionIcon}>
+                  <Ionicons name="book-outline" size={24} color={colors.accent.orange} />
+                </View>
+                <Text style={styles.sectionTitle}>Journal ({journal ? 1 : 0})</Text>
+              </View>
             </View>
+
             <View style={styles.itemsList}>
               {loading ? (
-                <ActivityIndicator size="small" color="#4A90E2" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary[500]} />
+                  <Text style={styles.loadingText}>Loading journal...</Text>
+                </View>
               ) : !journal ? (
-                <Text style={styles.emptyText}>
-                  No journal entries for this date
-                </Text>
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="book-outline" size={48} color={colors.neutral[300]} />
+                  <Text style={styles.emptyText}>No journal entry for this date</Text>
+                  <Text style={styles.emptySubtext}>Your reflections will appear here</Text>
+                </View>
               ) : (
-                <Pressable onPress={() => setJournalModalVisible(true)}>
+                <Pressable onPress={() => setJournalModalVisible(true)} style={styles.journalPressable}>
                   <View style={styles.journalItem}>
                     <View style={styles.journalHeader}>
                       <View style={styles.journalTitleContainer}>
-                        <Ionicons
-                          name="book-outline"
-                          size={20}
-                          color="#2d3748"
-                          style={styles.journalIcon}
-                        />
+                        <View style={styles.journalIconContainer}>
+                          <Ionicons name="book" size={20} color={colors.secondary[600]} />
+                        </View>
+                        <Text style={styles.journalTitle}>Daily Reflection</Text>
                       </View>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={handleDeleteJournal}
-                      >
-                        <Ionicons
-                          name="trash-outline"
-                          size={20}
-                          color="#e53e3e"
-                        />
+                      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteJournal} activeOpacity={0.7}>
+                        <Ionicons name="trash-outline" size={18} color={colors.error[500]} />
                       </TouchableOpacity>
                     </View>
-                    <Text style={styles.journalContent} numberOfLines={2}>
+                    <Text style={styles.journalContent} numberOfLines={3}>
                       {journal.content}
                     </Text>
-                    <Text style={styles.journalDate}>
-                      {formatDate(selectedDate)}
-                    </Text>
+                    <View style={styles.journalFooter}>
+                      <Text style={styles.journalDate}>{formatDate(selectedDate)}</Text>
+                      <Text style={styles.readMoreText}>Tap to read more</Text>
+                    </View>
                   </View>
                 </Pressable>
               )}
@@ -437,7 +503,8 @@ export default function AnalyticsScreen() {
           </View>
         </View>
       </ScrollView>
-      {/* Journal Modal */}
+
+      {/* Enhanced Journal Modal */}
       <Modal
         visible={journalModalVisible}
         animationType="slide"
@@ -448,253 +515,367 @@ export default function AnalyticsScreen() {
           <View style={styles.modalContent}>
             {/* Modal Handle */}
             <View style={styles.modalHandle} />
-
             <Pressable
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.closeButtonPressed,
-              ]}
+              style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
               onPress={() => setJournalModalVisible(false)}
             >
-              <Ionicons name="close-circle" size={28} color="#A0472A" />
+              <Ionicons name="close-circle" size={28} color={colors.secondary[600]} />
             </Pressable>
 
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
-                <Ionicons
-                  name="book"
-                  size={24}
-                  color="#2d3748"
-                  style={styles.modalIcon}
-                />
-                <Text style={styles.modalTitle}>
-                  {journal?.title || "Journal Entry"}
-                </Text>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="book" size={24} color={colors.secondary[600]} />
+                </View>
+                <Text style={styles.modalTitle}>Daily Reflection</Text>
               </View>
             </View>
 
             <View style={styles.modalDateContainer}>
               <View style={styles.modalDateWrapper}>
-                <Ionicons name="calendar-outline" size={16} color="#718096" />
+                <Ionicons name="calendar-outline" size={16} color={colors.neutral[500]} />
                 <Text style={styles.modalDate}>{formatDate(selectedDate)}</Text>
               </View>
             </View>
 
-            <View style={styles.modalBodyContainer}>
-              <Ionicons
-                name="chatbubble-outline"
-                size={20}
-                color="#4a5568"
-                style={styles.modalBodyIcon}
-              />
-              <Text style={styles.modalBody}>{journal?.content}</Text>
-            </View>
+            <ScrollView style={styles.modalBodyContainer} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalBodyContent}>
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={20}
+                  color={colors.neutral[600]}
+                  style={styles.modalBodyIcon}
+                />
+                <Text style={styles.modalBody}>{journal?.content}</Text>
+              </View>
+            </ScrollView>
 
             <View style={styles.modalBottomSection}>
-              <TouchableOpacity
-                onPress={handleDeleteJournal}
-                style={styles.modalDeleteButton}
-              >
-                <Ionicons name="trash-outline" size={20} color="#e53e3e" />
+              <TouchableOpacity onPress={handleDeleteJournal} style={styles.modalDeleteButton} activeOpacity={0.8}>
+                <Ionicons name="trash-outline" size={20} color={colors.error[600]} />
                 <Text style={styles.deleteButtonText}>Delete Entry</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-      {/* Confirm Delete Modal */}
+
+      {/* Enhanced Confirm Delete Modal */}
       <Modal
         visible={confirmJournalDeleteVisible || confirmTodoDeleteVisible}
         animationType="fade"
         transparent={true}
         onRequestClose={() => {
-          setConfirmJournalDeleteVisible(false);
-          setConfirmTodoDeleteVisible(false);
+          setConfirmJournalDeleteVisible(false)
+          setConfirmTodoDeleteVisible(false)
         }}
       >
         <View style={styles.centeredModalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Text style={styles.confirmTitle}>
-              {confirmTodoDeleteVisible ? "Delete Todo" : "Delete Journal"}
-            </Text>
+            <View style={styles.confirmIconContainer}>
+              <Ionicons name="warning-outline" size={48} color={colors.error[500]} />
+            </View>
+            <Text style={styles.confirmTitle}>{confirmTodoDeleteVisible ? "Delete Task" : "Delete Journal Entry"}</Text>
             <Text style={styles.confirmText}>
-              Are you sure you want to delete this{" "}
-              {confirmTodoDeleteVisible ? "todo" : "journal entry"}?
+              Are you sure you want to delete this {confirmTodoDeleteVisible ? "task" : "journal entry"}? This action
+              cannot be undone.
             </Text>
+
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => {
-                  setConfirmJournalDeleteVisible(false);
-                  setConfirmTodoDeleteVisible(false);
-                  setTodoIdToDelete(null);
+                  setConfirmJournalDeleteVisible(false)
+                  setConfirmTodoDeleteVisible(false)
+                  setTodoIdToDelete(null)
                 }}
+                activeOpacity={0.8}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmDeleteButton}
-                onPress={
-                  confirmTodoDeleteVisible
-                    ? confirmDeleteTodo
-                    : confirmDeleteJournal
-                }
+                onPress={confirmTodoDeleteVisible ? confirmDeleteTodo : confirmDeleteJournal}
+                activeOpacity={0.8}
               >
-                <Text style={styles.deleteButtonText}>Delete</Text>
+                <Text style={styles.confirmDeleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: colors.neutral[50],
   },
   scrollView: {
     flex: 1,
   },
+
+  // Enhanced Header
   header: {
-    padding: 20,
-    paddingBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 24,
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary[100],
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.primary[300],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 28,
-    // fontWeight: "bold",
-    color: "black",
-    marginBottom: 5,
+    fontSize: 32,
+    color: colors.neutral[900],
+    marginBottom: 4,
     fontFamily: "Sora-Bold",
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: "#718096",
+    color: colors.neutral[600],
     fontFamily: "Ubuntu-Regular",
+    lineHeight: 24,
   },
+
+  // Enhanced Calendar
   calendarContainer: {
     margin: 20,
-    backgroundColor: "#ffffff",
-    borderRadius: 15,
-    padding: 10,
-    shadowColor: "#000",
+    backgroundColor: colors.neutral[50],
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: colors.neutral[400],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+
+  // Enhanced Content Container
+  contentContainer: {
+    backgroundColor: colors.primary[50],
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    paddingBottom: 32,
+    minHeight: 400,
+  },
+
+  // Enhanced Date Header
+  dateHeader: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  dateHeaderContent: {
+    backgroundColor: colors.neutral[50],
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: colors.neutral[400],
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
-    fontFamily: "Ubuntu-Regular",
-  },
-  dateHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 1,
-    // backgroundColor: "#ffffff",
-    marginHorizontal: 0,
-    marginBottom: 10,
-    // borderRadius: 15,
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 1,
-    // },
-    // shadowOpacity: 0.05,
-    // shadowRadius: 2,
-    // elevation: 2,
   },
   selectedDate: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#2d3748",
-    marginBottom: 10,
+    color: colors.neutral[800],
+    marginBottom: 12,
     fontFamily: "Sora-Bold",
   },
   legend: {
     flexDirection: "row",
     justifyContent: "flex-start",
+    gap: 20,
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 20,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
   },
   legendText: {
     fontSize: 14,
-    color: "#718096",
+    color: colors.neutral[600],
+    fontFamily: "Ubuntu-Regular",
   },
+
+  // Enhanced Section Styles
   section: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    // borderWidth: 2,
-    // borderColor: "red",
+    marginHorizontal: 24,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 16,
+  },
+  sectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.neutral[50],
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    shadowColor: colors.neutral[400],
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 20,
-    color: "#2d3748",
+    color: colors.neutral[800],
     fontFamily: "Sora-Bold",
   },
+
+  // Enhanced Items List
   itemsList: {
-    // backgroundColor: "#ffffff",
-    // borderRadius: 15,
-    // padding: 15,
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 1,
-    // },
-    // shadowOpacity: 0.05,
-    // shadowRadius: 2,
-    // elevation: 2,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: colors.neutral[400],
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  // Enhanced Loading and Empty States
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.neutral[500],
+    fontFamily: "Ubuntu-Regular",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
   },
   emptyText: {
     textAlign: "center",
-    color: "#718096",
+    color: colors.neutral[500],
     fontSize: 16,
-    paddingVertical: 20,
+    marginTop: 12,
+    marginBottom: 4,
     fontFamily: "Ubuntu-Regular",
   },
+  emptySubtext: {
+    textAlign: "center",
+    color: colors.neutral[400],
+    fontSize: 14,
+    fontFamily: "Ubuntu-Regular",
+  },
+
+  // Enhanced Todo Styles
   todoItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    paddingVertical: 8,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.neutral[50],
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    shadowColor: colors.neutral[300],
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  todoContent: {
+    flex: 1,
   },
   todoText: {
-    flex: 1,
     fontSize: 15,
     fontFamily: "Ubuntu-Regular",
-    color: "#787878",
+    color: colors.neutral[700],
+    lineHeight: 22,
   },
   todoTextCompleted: {
-    color: "#787878",
+    color: colors.neutral[400],
     textDecorationLine: "line-through",
   },
-  checkbox: {
-    marginLeft: 10,
+  todoActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  deleteButton: {
-    padding: 5,
+  actionButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
+
+  // Enhanced Journal Styles
+  journalPressable: {
+    borderRadius: 16,
   },
   journalItem: {
-    backgroundColor: "#FFC7B5",
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 10,
+    backgroundColor: colors.secondary[100],
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: colors.secondary[200],
+    shadowColor: colors.secondary[400],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   journalHeader: {
     flexDirection: "row",
@@ -707,46 +888,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  journalIcon: {
-    marginRight: 8,
+  journalIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.neutral[50],
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
   },
   journalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
-    color: "#2d3748",
-    flex: 1,
+    color: colors.secondary[700],
+    fontFamily: "Sora-Bold",
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.error[50],
   },
   journalContent: {
     fontSize: 15,
-    color: "#A0472A",
+    color: colors.secondary[700],
     lineHeight: 22,
-    marginBottom: 8,
+    marginBottom: 12,
     fontFamily: "Ubuntu-Regular",
+  },
+  journalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   journalDate: {
     fontSize: 12,
-    color: "#c66a4d",
+    color: colors.secondary[500],
     fontFamily: "Ubuntu-Regular",
     fontStyle: "italic",
   },
+  readMoreText: {
+    fontSize: 12,
+    color: colors.secondary[600],
+    fontFamily: "Ubuntu-Regular",
+    fontWeight: "500",
+  },
+
+  // Enhanced Modal Styles
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-  },
-  centeredModalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: colors.neutral[50],
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     width: "100%",
     minHeight: "75%",
     maxHeight: "85%",
-    shadowColor: "#000",
+    shadowColor: colors.neutral[900],
     shadowOffset: {
       width: 0,
       height: -8,
@@ -759,7 +959,7 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 50,
     height: 5,
-    backgroundColor: "rgba(160, 71, 42, 0.3)",
+    backgroundColor: colors.secondary[300],
     borderRadius: 3,
     alignSelf: "center",
     marginBottom: 8,
@@ -768,17 +968,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     right: 20,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
+    backgroundColor: colors.neutral[100],
   },
   closeButtonPressed: {
-    backgroundColor: "rgba(160, 71, 42, 0.2)",
+    backgroundColor: colors.secondary[100],
     transform: [{ scale: 0.92 }],
-    shadowOpacity: 0.05,
   },
   modalHeader: {
     flexDirection: "row",
@@ -794,12 +994,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  modalIcon: {
-    marginRight: 10,
+  modalIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.secondary[100],
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   modalTitle: {
-    fontSize: 26,
-    color: "#2d3748",
+    fontSize: 24,
+    color: colors.neutral[800],
     flex: 1,
     letterSpacing: -0.3,
     lineHeight: 32,
@@ -815,19 +1021,25 @@ const styles = StyleSheet.create({
   modalDateWrapper: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.neutral[100],
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   modalDate: {
     fontSize: 14,
-    color: "#718096",
+    color: colors.neutral[600],
     marginLeft: 6,
     fontStyle: "italic",
     fontFamily: "Ubuntu-Regular",
   },
   modalBodyContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  modalBodyContent: {
     flexDirection: "row",
     marginBottom: 24,
-    paddingHorizontal: 24,
-    flex: 1,
   },
   modalBodyIcon: {
     marginRight: 12,
@@ -835,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     fontSize: 16,
-    color: "#4a5568",
+    color: colors.neutral[700],
     lineHeight: 24,
     flex: 1,
     fontFamily: "Ubuntu-Regular",
@@ -844,88 +1056,109 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: colors.neutral[200],
   },
   modalDeleteButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fef2f2",
-    paddingVertical: 12,
+    backgroundColor: colors.error[50],
+    paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: colors.error[200],
   },
   deleteButtonText: {
-    color: "#e53e3e",
+    color: colors.error[600],
     fontSize: 16,
     marginLeft: 8,
     fontFamily: "Sora-Bold",
   },
+
+  // Enhanced Confirm Modal
+  centeredModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
   confirmModalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.neutral[50],
     borderRadius: 20,
     padding: 24,
     width: "85%",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowColor: colors.neutral[900],
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  confirmIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.error[50],
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
   confirmTitle: {
-    fontSize: 22,
-    color: "#1a202c",
+    fontSize: 20,
+    color: colors.neutral[800],
     marginBottom: 8,
     textAlign: "center",
     fontFamily: "Sora-Bold",
   },
   confirmText: {
     fontSize: 16,
-    color: "#4a5568",
+    color: colors.neutral[600],
     marginBottom: 24,
     textAlign: "center",
+    lineHeight: 24,
     fontFamily: "Ubuntu-Regular",
   },
   confirmButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+    gap: 12,
   },
   cancelButton: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
     flex: 1,
-    marginRight: 10,
     alignItems: "center",
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
   },
   cancelButtonText: {
-    color: "#718096",
+    color: colors.neutral[600],
     fontSize: 16,
     fontFamily: "Sora-Bold",
   },
   confirmDeleteButton: {
-    backgroundColor: "#fff1f1",
+    backgroundColor: colors.error[500],
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
     flex: 1,
-    marginLeft: 10,
     alignItems: "center",
+    shadowColor: colors.error[500],
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-
-  //
-  youContainer: {
-    // borderWidth: 2,
-    // borderColor: "red",
-    padding: 2,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    backgroundColor: "#ffe6de",
-    paddingTop: 25,
-    paddingBottom: 65,
+  confirmDeleteButtonText: {
+    color: colors.neutral[50],
+    fontSize: 16,
+    fontFamily: "Sora-Bold",
   },
-});
+})
