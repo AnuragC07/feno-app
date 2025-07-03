@@ -5,15 +5,15 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  Modal,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    Modal,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { useTimer } from "react-timer-hook";
@@ -280,7 +280,7 @@ const WellBeingSanctuary = () => {
     const fetchMood = async () => {
       setLoadingMood(true)
       try {
-        const res = await fetch(`http://192.168.0.100:8000/api/moods/by-date/${todayStr}?userId=${user.id}`)
+        const res = await fetch(`http://192.168.0.101:8000/api/moods/by-date/${todayStr}?userId=${user.id}`)
         if (!res.ok) {
           setMood(null)
         } else {

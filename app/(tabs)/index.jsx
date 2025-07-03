@@ -79,9 +79,9 @@ const colors = {
 }
 
 // IMPORTANT: Replace with your computer's local IP address
-const TASK_API_URL = "http://192.168.0.100:8000/api/tasks"
-const JOURNAL_API_URL = "http://192.168.0.100:8000/api/journals"
-const MOOD_API_URL = "http://192.168.0.100:8000/api/moods"
+const TASK_API_URL = "http://192.168.0.101:8000/api/tasks"
+const JOURNAL_API_URL = "http://192.168.0.101:8000/api/journals"
+const MOOD_API_URL = "http://192.168.0.101:8000/api/moods"
 
 export default function Home() {
   const [user, setUser] = useState(null)

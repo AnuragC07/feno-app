@@ -1,13 +1,28 @@
-"use client"
+"use client";
 
-import { Ionicons } from "@expo/vector-icons"
-import { useFonts } from "expo-font"
-import { useCallback, useEffect, useState } from "react"
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import { Calendar } from "react-native-calendars"
-import { SafeAreaView } from "react-native-safe-area-context"
-import Toast from "react-native-toast-message"
-import { supabase } from "../lib/supabase"
+import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Calendar } from "react-native-calendars";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import excited from "../../assets/images/excitedmood.png";
+import good from "../../assets/images/goodmood.png";
+import meh from "../../assets/images/mehmood.png";
+import sad from "../../assets/images/sadmood.png";
+import stressful from "../../assets/images/stressfullmood.png";
+import { supabase } from "../lib/supabase";
 
 // Enhanced color palette (consistent with home screen)
 const colors = {
@@ -77,153 +92,169 @@ const colors = {
     purple: "#8b5cf6",
     teal: "#14b8a6",
   },
-}
+};
 
-const API_BASE = "http://192.168.0.100:8000/api" // Change if needed
+const API_BASE = "http://192.168.0.101:8000/api"; // Change if needed
+
+// Mood mapping for analytics
+const moodMap = [
+  { label: "Excited", icon: excited, score: 5, color: "#15803d" }, // dark green
+  { label: "Happy", icon: good, score: 4, color: "#4ade80" }, // light green
+  { label: "Meh", icon: meh, score: 3, color: "#fde047" }, // yellow
+  { label: "Sad", icon: sad, score: 2, color: "#fb923c" }, // orange
+  { label: "Stressful", icon: stressful, score: 1, color: "#ef4444" }, // red
+];
 
 export default function AnalyticsScreen() {
   const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date()
-    const yyyy = today.getFullYear()
-    const mm = String(today.getMonth() + 1).padStart(2, "0")
-    const dd = String(today.getDate()).padStart(2, "0")
-    return `${yyyy}-${mm}-${dd}`
-  })
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
 
-  const [todos, setTodos] = useState([])
-  const [journal, setJournal] = useState(null)
-  const [todoDates, setTodoDates] = useState([])
-  const [journalDates, setJournalDates] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [loadingDates, setLoadingDates] = useState(true)
-  const [journalModalVisible, setJournalModalVisible] = useState(false)
-  const [confirmJournalDeleteVisible, setConfirmJournalDeleteVisible] = useState(false)
-  const [confirmTodoDeleteVisible, setConfirmTodoDeleteVisible] = useState(false)
-  const [todoIdToDelete, setTodoIdToDelete] = useState(null)
+  const [todos, setTodos] = useState([]);
+  const [journal, setJournal] = useState(null);
+  const [todoDates, setTodoDates] = useState([]);
+  const [journalDates, setJournalDates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingDates, setLoadingDates] = useState(true);
+  const [journalModalVisible, setJournalModalVisible] = useState(false);
+  const [confirmJournalDeleteVisible, setConfirmJournalDeleteVisible] =
+    useState(false);
+  const [confirmTodoDeleteVisible, setConfirmTodoDeleteVisible] =
+    useState(false);
+  const [todoIdToDelete, setTodoIdToDelete] = useState(null);
+  const [moodModalVisible, setMoodModalVisible] = useState(false);
+  const [moodStats, setMoodStats] = useState(null);
+  const [moodLoading, setMoodLoading] = useState(false);
 
   const [fontsLoaded] = useFonts({
     "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
     "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
-  })
+  });
 
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
-  }, [])
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
 
   // Fetch all dates with todos and journals for calendar dots
   const fetchDates = useCallback(async () => {
-    if (!user) return
-    setLoadingDates(true)
+    if (!user) return;
+    setLoadingDates(true);
     try {
       const [todoRes, journalRes] = await Promise.all([
         fetch(`${API_BASE}/tasks/dates?userId=${user.id}`),
         fetch(`${API_BASE}/journals/dates?userId=${user.id}`),
-      ])
+      ]);
 
-      const todoDatesRaw = await todoRes.json()
-      const journalDatesRaw = await journalRes.json()
+      const todoDatesRaw = await todoRes.json();
+      const journalDatesRaw = await journalRes.json();
 
-      const todoDates = Array.isArray(todoDatesRaw) ? todoDatesRaw : []
-      const journalDates = Array.isArray(journalDatesRaw) ? journalDatesRaw : []
+      const todoDates = Array.isArray(todoDatesRaw) ? todoDatesRaw : [];
+      const journalDates = Array.isArray(journalDatesRaw)
+        ? journalDatesRaw
+        : [];
 
-      setTodoDates(todoDates)
-      setJournalDates(journalDates)
+      setTodoDates(todoDates);
+      setJournalDates(journalDates);
     } catch (e) {
-      setTodoDates([])
-      setJournalDates([])
+      setTodoDates([]);
+      setJournalDates([]);
     } finally {
-      setLoadingDates(false)
+      setLoadingDates(false);
     }
-  }, [user])
+  }, [user]);
 
   // Fetch todos and journal for selected date
   const fetchDataForDate = useCallback(
     async (date) => {
-      if (!user) return
-      setLoading(true)
+      if (!user) return;
+      setLoading(true);
       try {
         const [todosRes, journalRes] = await Promise.all([
           fetch(`${API_BASE}/tasks/by-date/${date}?userId=${user.id}`),
           fetch(`${API_BASE}/journals/by-date/${date}?userId=${user.id}`),
-        ])
+        ]);
 
-        const todosRaw = await todosRes.json()
-        let journal = null
+        const todosRaw = await todosRes.json();
+        let journal = null;
 
         if (journalRes.status === 200) {
-          journal = await journalRes.json()
+          journal = await journalRes.json();
         }
 
-        const todos = Array.isArray(todosRaw) ? todosRaw : []
-        setTodos(todos)
-        setJournal(journal)
+        const todos = Array.isArray(todosRaw) ? todosRaw : [];
+        setTodos(todos);
+        setJournal(journal);
       } catch (e) {
-        setTodos([])
-        setJournal(null)
+        setTodos([]);
+        setJournal(null);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
-    [user],
-  )
+    [user]
+  );
 
   useEffect(() => {
-    fetchDates()
-  }, [fetchDates])
+    fetchDates();
+  }, [fetchDates]);
 
   useEffect(() => {
-    fetchDataForDate(selectedDate)
-  }, [selectedDate, fetchDataForDate])
+    fetchDataForDate(selectedDate);
+  }, [selectedDate, fetchDataForDate]);
 
   // Calendar dots logic
   const getMarkedDates = useCallback(() => {
-    const marked = {}
+    const marked = {};
 
     // Add dots for dates with todos
     todoDates.forEach((date) => {
       if (!marked[date]) {
-        marked[date] = { dots: [] }
+        marked[date] = { dots: [] };
       }
       marked[date].dots.push({
         color: colors.accent.blue,
         selectedDotColor: "#ffffff",
-      })
-    })
+      });
+    });
 
     // Add dots for dates with journals
     journalDates.forEach((date) => {
       if (!marked[date]) {
-        marked[date] = { dots: [] }
+        marked[date] = { dots: [] };
       }
       marked[date].dots.push({
         color: colors.accent.orange,
         selectedDotColor: "#ffffff",
-      })
-    })
+      });
+    });
 
     // Mark selected date
     if (marked[selectedDate]) {
-      marked[selectedDate].selected = true
-      marked[selectedDate].selectedColor = colors.primary[500]
+      marked[selectedDate].selected = true;
+      marked[selectedDate].selectedColor = colors.primary[500];
     } else {
       marked[selectedDate] = {
         selected: true,
         selectedColor: colors.primary[500],
         disableTouchEvent: true,
         selectedTextColor: "white",
-      }
+      };
     }
 
-    return marked
-  }, [todoDates, journalDates, selectedDate])
+    return marked;
+  }, [todoDates, journalDates, selectedDate]);
 
   // Toggle todo completed
   const toggleTodo = async (id, completed) => {
@@ -232,99 +263,252 @@ export default function AnalyticsScreen() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: !completed }),
-      })
-      fetchDataForDate(selectedDate)
+      });
+      fetchDataForDate(selectedDate);
     } catch (e) {}
-  }
+  };
 
   // Delete todo
   const deleteTodo = (id) => {
-    setTodoIdToDelete(id)
-    setConfirmTodoDeleteVisible(true)
-  }
+    setTodoIdToDelete(id);
+    setConfirmTodoDeleteVisible(true);
+  };
 
   const confirmDeleteTodo = async () => {
-    if (!todoIdToDelete) return
+    if (!todoIdToDelete) return;
 
     try {
-      await fetch(`${API_BASE}/tasks/${todoIdToDelete}`, { method: "DELETE" })
-      fetchDataForDate(selectedDate)
-      fetchDates()
+      await fetch(`${API_BASE}/tasks/${todoIdToDelete}`, { method: "DELETE" });
+      fetchDataForDate(selectedDate);
+      fetchDates();
       Toast.show({
         type: "success",
         text1: "Todo Deleted",
-      })
+      });
     } catch (e) {
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not delete todo.",
-      })
+      });
     } finally {
-      setTodoIdToDelete(null)
-      setConfirmTodoDeleteVisible(false)
+      setTodoIdToDelete(null);
+      setConfirmTodoDeleteVisible(false);
     }
-  }
+  };
 
   // Delete journal
   const handleDeleteJournal = () => {
     if (journal && journal._id) {
-      setConfirmJournalDeleteVisible(true)
+      setConfirmJournalDeleteVisible(true);
     }
-  }
+  };
 
   const confirmDeleteJournal = async () => {
-    setConfirmJournalDeleteVisible(false)
+    setConfirmJournalDeleteVisible(false);
     if (journal && journal._id) {
       try {
         await fetch(`${API_BASE}/journals/${journal._id}`, {
           method: "DELETE",
-        })
-        setJournalModalVisible(false)
-        fetchDataForDate(selectedDate)
-        fetchDates()
+        });
+        setJournalModalVisible(false);
+        fetchDataForDate(selectedDate);
+        fetchDates();
         Toast.show({
           type: "success",
           text1: "Journal entry deleted.",
-        })
+        });
       } catch (e) {
         Toast.show({
           type: "error",
           text1: "Error",
           text2: "Could not delete journal entry.",
-        })
+        });
       }
     }
-  }
+  };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
-  }
+    });
+  };
+
+  // Fetch all moods for the user
+  const fetchMoodStats = async () => {
+    if (!user) return;
+    setMoodLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/moods?userId=${user.id}`);
+      const moods = await res.json();
+      // Count each mood
+      const counts = {};
+      let totalScore = 0;
+      moods.forEach((entry) => {
+        counts[entry.mood] = (counts[entry.mood] || 0) + 1;
+        const moodObj = moodMap.find((m) => m.label === entry.mood);
+        if (moodObj) totalScore += moodObj.score;
+      });
+      // Prepare data for chart
+      const chartData = moodMap.map((m) => ({
+        ...m,
+        count: counts[m.label] || 0,
+      }));
+      // Calculate average mood
+      const avgScore = moods.length ? totalScore / moods.length : 0;
+      let avgMood = null;
+      if (avgScore > 0) {
+        // Find the closest mood by score
+        avgMood = moodMap.reduce((prev, curr) =>
+          Math.abs(curr.score - avgScore) < Math.abs(prev.score - avgScore)
+            ? curr
+            : prev
+        );
+      }
+      setMoodStats({ chartData, avgMood, total: moods.length });
+    } catch (e) {
+      setMoodStats(null);
+    } finally {
+      setMoodLoading(false);
+    }
+  };
 
   if (!fontsLoaded) {
-    return null // or <AppLoading />
+    return null; // or <AppLoading />
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Enhanced Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.title}>Your Journey</Text>
-            <Text style={styles.subtitle}>Reflecting on your daily progress</Text>
+            <Text style={styles.subtitle}>
+              Reflecting on your daily progress
+            </Text>
           </View>
           <View style={styles.headerIcon}>
-            <Ionicons name="analytics-outline" size={32} color={colors.primary[500]} />
+            <Ionicons
+              name="analytics-outline"
+              size={32}
+              color={colors.primary[500]}
+            />
           </View>
         </View>
-
+        {/* Mood at a Glance Container (moved below header) */}
+        <Pressable
+          style={styles.moodGlanceContainer}
+          onPress={() => {
+            setMoodModalVisible(true);
+            fetchMoodStats();
+          }}
+        >
+          <View style={styles.moodGlanceHeader}>
+            <View style={styles.moodGlanceIconContainer}>
+              <Ionicons
+                name="analytics-outline"
+                size={20}
+                color={colors.primary[600]}
+              />
+            </View>
+            <View style={styles.moodGlanceTextContainer}>
+              <Text style={styles.moodGlanceTitle}>Mood Insights</Text>
+              <Text style={styles.moodGlanceSub}>
+                Tap to explore your emotional journey
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.primary[500]}
+            />
+          </View>
+        </Pressable>
+        {/* Mood Modal */}
+        <Modal
+          visible={moodModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setMoodModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.moodModalContent}>
+              <View style={styles.modalHandle} />
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setMoodModalVisible(false)}
+              >
+                <Ionicons name="close-circle" size={28} color={"#171717"} />
+              </Pressable>
+              <Text style={styles.moodModalTitle}>Mood History</Text>
+              {moodLoading ? (
+                <ActivityIndicator
+                  size="large"
+                  color={"#171717"}
+                  style={{ marginTop: 32 }}
+                />
+              ) : moodStats ? (
+                <>
+                  {/* Bar Chart */}
+                  <View style={styles.moodChartContainer}>
+                    {moodStats.chartData.map((m, idx) => (
+                      <View key={m.label} style={styles.moodBarWrapper}>
+                        <Image source={m.icon} style={styles.moodBarIcon} />
+                        <View style={styles.moodBarTrack}>
+                          <View
+                            style={[
+                              styles.moodBarFill,
+                              {
+                                width: `${Math.max(
+                                  (m.count / (moodStats.total || 1)) * 100,
+                                  6
+                                )}%`,
+                                backgroundColor: m.color,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.moodBarCount}>{m.count}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {/* Average Mood */}
+                  <View style={styles.moodAvgContainer}>
+                    <Text style={styles.moodAvgLabel}>Average Mood:</Text>
+                    {moodStats.avgMood ? (
+                      <>
+                        <Image
+                          source={moodStats.avgMood.icon}
+                          style={styles.moodAvgIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.moodAvgText,
+                            { color: moodStats.avgMood.color },
+                          ]}
+                        >
+                          {moodStats.avgMood.label}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.moodAvgText}>No data</Text>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.moodAvgText}>No mood data found.</Text>
+              )}
+            </View>
+          </View>
+        </Modal>
         {/* Enhanced Calendar */}
         <View style={styles.calendarContainer}>
           <Calendar
@@ -378,22 +562,33 @@ export default function AnalyticsScreen() {
             }}
           />
         </View>
-
         {/* Enhanced Selected Date Display */}
         <View style={styles.contentContainer}>
           <View style={styles.dateHeader}>
             <View style={styles.dateHeaderContent}>
-              <Text style={styles.selectedDate}>Your day on {formatDate(selectedDate)}</Text>
-              <View style={styles.legend}>
+              <Text style={styles.selectedDate}>
+                {formatDate(selectedDate)}
+              </Text>
+              {/* <View style={styles.legend}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.accent.blue }]} />
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: colors.accent.blue },
+                    ]}
+                  />
                   <Text style={styles.legendText}>Tasks</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.accent.orange }]} />
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: colors.accent.orange },
+                    ]}
+                  />
                   <Text style={styles.legendText}>Journal</Text>
                 </View>
-              </View>
+              </View> */}
             </View>
           </View>
 
@@ -402,7 +597,11 @@ export default function AnalyticsScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <View style={styles.sectionIcon}>
-                  <Ionicons name="checkmark-circle-outline" size={24} color={colors.accent.blue} />
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={24}
+                    color={colors.accent.blue}
+                  />
                 </View>
                 <Text style={styles.sectionTitle}>Tasks ({todos.length})</Text>
               </View>
@@ -416,15 +615,28 @@ export default function AnalyticsScreen() {
                 </View>
               ) : todos.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="clipboard-outline" size={48} color={colors.neutral[300]} />
+                  <Ionicons
+                    name="clipboard-outline"
+                    size={48}
+                    color={colors.neutral[300]}
+                  />
                   <Text style={styles.emptyText}>No tasks for this date</Text>
-                  <Text style={styles.emptySubtext}>Tasks you create will appear here</Text>
+                  <Text style={styles.emptySubtext}>
+                    Tasks you create will appear here
+                  </Text>
                 </View>
               ) : (
                 todos.map((todo) => (
                   <View key={todo._id} style={styles.todoItem}>
                     <View style={styles.todoContent}>
-                      <Text style={[styles.todoText, todo.done && styles.todoTextCompleted]}>{todo.content}</Text>
+                      <Text
+                        style={[
+                          styles.todoText,
+                          todo.done && styles.todoTextCompleted,
+                        ]}
+                      >
+                        {todo.content}
+                      </Text>
                     </View>
                     <View style={styles.todoActions}>
                       <TouchableOpacity
@@ -433,9 +645,17 @@ export default function AnalyticsScreen() {
                         activeOpacity={0.7}
                       >
                         <Ionicons
-                          name={todo.done ? "checkmark-circle" : "checkmark-circle-outline"}
+                          name={
+                            todo.done
+                              ? "checkmark-circle"
+                              : "checkmark-circle-outline"
+                          }
                           size={24}
-                          color={todo.done ? colors.success[500] : colors.neutral[400]}
+                          color={
+                            todo.done
+                              ? colors.success[500]
+                              : colors.neutral[400]
+                          }
                         />
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -443,7 +663,11 @@ export default function AnalyticsScreen() {
                         onPress={() => deleteTodo(todo._id)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color={colors.error[500]}
+                        />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -457,9 +681,15 @@ export default function AnalyticsScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <View style={styles.sectionIcon}>
-                  <Ionicons name="book-outline" size={24} color={colors.accent.orange} />
+                  <Ionicons
+                    name="book-outline"
+                    size={24}
+                    color={colors.accent.orange}
+                  />
                 </View>
-                <Text style={styles.sectionTitle}>Journal ({journal ? 1 : 0})</Text>
+                <Text style={styles.sectionTitle}>
+                  Journal ({journal ? 1 : 0})
+                </Text>
               </View>
             </View>
 
@@ -471,29 +701,56 @@ export default function AnalyticsScreen() {
                 </View>
               ) : !journal ? (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="book-outline" size={48} color={colors.neutral[300]} />
-                  <Text style={styles.emptyText}>No journal entry for this date</Text>
-                  <Text style={styles.emptySubtext}>Your reflections will appear here</Text>
+                  <Ionicons
+                    name="book-outline"
+                    size={48}
+                    color={colors.neutral[300]}
+                  />
+                  <Text style={styles.emptyText}>
+                    No journal entry for this date
+                  </Text>
+                  <Text style={styles.emptySubtext}>
+                    Your reflections will appear here
+                  </Text>
                 </View>
               ) : (
-                <Pressable onPress={() => setJournalModalVisible(true)} style={styles.journalPressable}>
+                <Pressable
+                  onPress={() => setJournalModalVisible(true)}
+                  style={styles.journalPressable}
+                >
                   <View style={styles.journalItem}>
                     <View style={styles.journalHeader}>
                       <View style={styles.journalTitleContainer}>
                         <View style={styles.journalIconContainer}>
-                          <Ionicons name="book" size={20} color={colors.secondary[600]} />
+                          <Ionicons
+                            name="book"
+                            size={20}
+                            color={colors.secondary[600]}
+                          />
                         </View>
-                        <Text style={styles.journalTitle}>Daily Reflection</Text>
+                        <Text style={styles.journalTitle}>
+                          Daily Reflection
+                        </Text>
                       </View>
-                      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteJournal} activeOpacity={0.7}>
-                        <Ionicons name="trash-outline" size={18} color={colors.error[500]} />
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={handleDeleteJournal}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color={colors.error[500]}
+                        />
                       </TouchableOpacity>
                     </View>
                     <Text style={styles.journalContent} numberOfLines={3}>
                       {journal.content}
                     </Text>
                     <View style={styles.journalFooter}>
-                      <Text style={styles.journalDate}>{formatDate(selectedDate)}</Text>
+                      <Text style={styles.journalDate}>
+                        {formatDate(selectedDate)}
+                      </Text>
                       <Text style={styles.readMoreText}>Tap to read more</Text>
                     </View>
                   </View>
@@ -516,16 +773,27 @@ export default function AnalyticsScreen() {
             {/* Modal Handle */}
             <View style={styles.modalHandle} />
             <Pressable
-              style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.closeButtonPressed,
+              ]}
               onPress={() => setJournalModalVisible(false)}
             >
-              <Ionicons name="close-circle" size={28} color={colors.secondary[600]} />
+              <Ionicons
+                name="close-circle"
+                size={28}
+                color={colors.secondary[600]}
+              />
             </Pressable>
 
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
                 <View style={styles.modalIconContainer}>
-                  <Ionicons name="book" size={24} color={colors.secondary[600]} />
+                  <Ionicons
+                    name="book"
+                    size={24}
+                    color={colors.secondary[600]}
+                  />
                 </View>
                 <Text style={styles.modalTitle}>Daily Reflection</Text>
               </View>
@@ -533,12 +801,19 @@ export default function AnalyticsScreen() {
 
             <View style={styles.modalDateContainer}>
               <View style={styles.modalDateWrapper}>
-                <Ionicons name="calendar-outline" size={16} color={colors.neutral[500]} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={colors.neutral[500]}
+                />
                 <Text style={styles.modalDate}>{formatDate(selectedDate)}</Text>
               </View>
             </View>
 
-            <ScrollView style={styles.modalBodyContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalBodyContainer}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.modalBodyContent}>
                 <Ionicons
                   name="chatbubble-outline"
@@ -551,8 +826,16 @@ export default function AnalyticsScreen() {
             </ScrollView>
 
             <View style={styles.modalBottomSection}>
-              <TouchableOpacity onPress={handleDeleteJournal} style={styles.modalDeleteButton} activeOpacity={0.8}>
-                <Ionicons name="trash-outline" size={20} color={colors.error[600]} />
+              <TouchableOpacity
+                onPress={handleDeleteJournal}
+                style={styles.modalDeleteButton}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={colors.error[600]}
+                />
                 <Text style={styles.deleteButtonText}>Delete Entry</Text>
               </TouchableOpacity>
             </View>
@@ -566,18 +849,27 @@ export default function AnalyticsScreen() {
         animationType="fade"
         transparent={true}
         onRequestClose={() => {
-          setConfirmJournalDeleteVisible(false)
-          setConfirmTodoDeleteVisible(false)
+          setConfirmJournalDeleteVisible(false);
+          setConfirmTodoDeleteVisible(false);
         }}
       >
         <View style={styles.centeredModalOverlay}>
           <View style={styles.confirmModalContent}>
             <View style={styles.confirmIconContainer}>
-              <Ionicons name="warning-outline" size={48} color={colors.error[500]} />
+              <Ionicons
+                name="warning-outline"
+                size={48}
+                color={colors.error[500]}
+              />
             </View>
-            <Text style={styles.confirmTitle}>{confirmTodoDeleteVisible ? "Delete Task" : "Delete Journal Entry"}</Text>
+            <Text style={styles.confirmTitle}>
+              {confirmTodoDeleteVisible
+                ? "Delete Task"
+                : "Delete Journal Entry"}
+            </Text>
             <Text style={styles.confirmText}>
-              Are you sure you want to delete this {confirmTodoDeleteVisible ? "task" : "journal entry"}? This action
+              Are you sure you want to delete this{" "}
+              {confirmTodoDeleteVisible ? "task" : "journal entry"}? This action
               cannot be undone.
             </Text>
 
@@ -585,9 +877,9 @@ export default function AnalyticsScreen() {
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => {
-                  setConfirmJournalDeleteVisible(false)
-                  setConfirmTodoDeleteVisible(false)
-                  setTodoIdToDelete(null)
+                  setConfirmJournalDeleteVisible(false);
+                  setConfirmTodoDeleteVisible(false);
+                  setTodoIdToDelete(null);
                 }}
                 activeOpacity={0.8}
               >
@@ -595,7 +887,11 @@ export default function AnalyticsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmDeleteButton}
-                onPress={confirmTodoDeleteVisible ? confirmDeleteTodo : confirmDeleteJournal}
+                onPress={
+                  confirmTodoDeleteVisible
+                    ? confirmDeleteTodo
+                    : confirmDeleteJournal
+                }
                 activeOpacity={0.8}
               >
                 <Text style={styles.confirmDeleteButtonText}>Delete</Text>
@@ -605,7 +901,7 @@ export default function AnalyticsScreen() {
         </View>
       </Modal>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -937,7 +1233,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    // backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   modalContent: {
     backgroundColor: colors.neutral[50],
@@ -1161,4 +1457,237 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Sora-Bold",
   },
-})
+
+  // Mood styles
+  // Container Styles
+  moodGlanceContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 20,
+    margin: 20,
+    marginBottom: 0,
+    shadowColor: "#a3a3a3",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+  },
+
+  moodGlanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+
+  moodGlanceIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#feeee0",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#fbbf96",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  moodGlanceTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+
+  moodGlanceTitle: {
+    fontSize: 18,
+    color: "#262626",
+    fontFamily: "Sora-Bold",
+    marginBottom: 2,
+    letterSpacing: -0.3,
+  },
+
+  moodGlanceSub: {
+    fontSize: 14,
+    color: "#737373",
+    fontFamily: "Ubuntu-Regular",
+    lineHeight: 20,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    // backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+
+  moodModalContent: {
+    backgroundColor: "#fafafa",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    width: "100%",
+    minHeight: "65%",
+    maxHeight: "85%",
+    shadowColor: "#171717",
+    shadowOffset: { width: 0, height: -12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 32,
+    elevation: 25,
+    paddingTop: 12,
+    paddingHorizontal: 24,
+  },
+
+  modalHandle: {
+    width: 50,
+    height: 5,
+    backgroundColor: "#d4d4d4",
+    borderRadius: 3,
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+
+  closeButton: {
+    position: "absolute",
+    top: 16,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    shadowColor: "#a3a3a3",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  moodModalTitle: {
+    fontSize: 26,
+    color: "#262626",
+    fontFamily: "Sora-Bold",
+    marginBottom: 32,
+    marginTop: 24,
+    textAlign: "center",
+    letterSpacing: -0.5,
+  },
+
+  // Chart Styles
+  moodChartContainer: {
+    width: "100%",
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: "#d4d4d4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f5f5f5",
+  },
+
+  moodBarWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingVertical: 4,
+  },
+
+  moodBarIcon: {
+    width: 36,
+    height: 36,
+    marginRight: 16,
+    borderRadius: 18,
+    shadowColor: "#a3a3a3",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  moodBarTrack: {
+    flex: 1,
+    height: 24,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    overflow: "hidden",
+    marginRight: 16,
+    shadowColor: "#d4d4d4",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  moodBarFill: {
+    height: 24,
+    borderRadius: 12,
+    shadowColor: "rgba(0, 0, 0, 0.2)",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  moodBarCount: {
+    fontSize: 16,
+    color: "#404040",
+    fontFamily: "Sora-Bold",
+    minWidth: 32,
+    textAlign: "center",
+    backgroundColor: "#f5f5f5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+
+  // Average Mood Styles
+  moodAvgContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fef7f0",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#feeee0",
+    shadowColor: "#fbbf96",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+
+  moodAvgLabel: {
+    fontSize: 16,
+    color: "#525252",
+    fontFamily: "Sora-Bold",
+    marginRight: 12,
+  },
+
+  moodAvgIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
+    borderRadius: 20,
+    shadowColor: "#a3a3a3",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  moodAvgText: {
+    fontSize: 18,
+    color: "#e55a1f",
+    fontFamily: "Sora-Bold",
+    letterSpacing: -0.3,
+  },
+});

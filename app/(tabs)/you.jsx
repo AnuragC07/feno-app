@@ -1,15 +1,25 @@
-"use client"
+"use client";
 
-import { Ionicons } from "@expo/vector-icons"
-import { useEffect, useState } from "react"
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
-import Toast from "react-native-toast-message"
-import excited from "../../assets/images/excitedmood.png"
-import good from "../../assets/images/goodmood.png"
-import meh from "../../assets/images/mehmood.png"
-import sad from "../../assets/images/sadmood.png"
-import stressful from "../../assets/images/stressfullmood.png"
-import { supabase } from "../lib/supabase"
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Toast from "react-native-toast-message";
+import excited from "../../assets/images/excitedmood.png";
+import good from "../../assets/images/goodmood.png";
+import meh from "../../assets/images/mehmood.png";
+import sad from "../../assets/images/sadmood.png";
+import stressful from "../../assets/images/stressfullmood.png";
+import { supabase } from "../lib/supabase";
 
 // Enhanced color palette (consistent with other screens)
 const colors = {
@@ -80,136 +90,147 @@ const colors = {
     sage: "#B6D7A8",
     lightPeach: "#fff8f7",
   },
-}
+};
 
 export default function YouScreen() {
-  const [tasks, setTasks] = useState([])
-  const [mood, setMood] = useState(null)
-  const [loadingMood, setLoadingMood] = useState(true)
-  const [journal, setJournal] = useState(null)
-  const [user, setUser] = useState(null)
-  const [isModalVisible, setModalVisible] = useState(false)
-  const [newUsername, setNewUsername] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [tasks, setTasks] = useState([]);
+  const [mood, setMood] = useState(null);
+  const [loadingMood, setLoadingMood] = useState(true);
+  const [journal, setJournal] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [journalModalVisible, setJournalModalVisible] = useState(false);
 
   // Get today's date in YYYY-MM-DD
-  const today = new Date()
-  const yyyy = today.getFullYear()
-  const mm = String(today.getMonth() + 1).padStart(2, "0")
-  const dd = String(today.getDate()).padStart(2, "0")
-  const todayStr = `${yyyy}-${mm}-${dd}`
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const todayStr = `${yyyy}-${mm}-${dd}`;
 
   // For display: e.g. 22nd June, 2025
   const displayDate = today.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  })
+  });
 
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
+      } = await supabase.auth.getUser();
+      setUser(user);
       if (user) {
-        setNewUsername(user.user_metadata?.display_name || "")
+        setNewUsername(user.user_metadata?.display_name || "");
       }
-    }
-    getUser()
-  }, [])
+    };
+    getUser();
+  }, []);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
     const fetchMood = async () => {
-      setLoadingMood(true)
+      setLoadingMood(true);
       try {
-        const res = await fetch(`http://192.168.0.11:8000/api/moods/by-date/${todayStr}?userId=${user.id}`)
+        const res = await fetch(
+          `http://192.168.0.101:8000/api/moods/by-date/${todayStr}?userId=${user.id}`
+        );
         if (!res.ok) {
-          setMood(null)
+          setMood(null);
         } else {
-          const data = await res.json()
-          setMood(data)
+          const data = await res.json();
+          setMood(data);
         }
       } catch (e) {
-        setMood(null)
+        setMood(null);
       } finally {
-        setLoadingMood(false)
+        setLoadingMood(false);
       }
-    }
-    fetchMood()
-  }, [todayStr, user])
+    };
+    fetchMood();
+  }, [todayStr, user]);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
     const fetchTasks = async () => {
       try {
-        const res = await fetch(`http://192.168.0.11:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`)
+        const res = await fetch(
+          `http://192.168.0.101:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`
+        );
         if (!res.ok) {
-          setTasks([])
+          setTasks([]);
         } else {
-          const data = await res.json()
-          setTasks(data)
+          const data = await res.json();
+          setTasks(data);
         }
       } catch (e) {
-        setTasks([])
+        setTasks([]);
       }
-    }
-    fetchTasks()
-  }, [todayStr, user])
+    };
+    fetchTasks();
+  }, [todayStr, user]);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
     const fetchJournal = async () => {
       try {
-        const res = await fetch(`http://192.168.0.11:8000/api/journals/by-date/${todayStr}?userId=${user.id}`)
+        const res = await fetch(
+          `http://192.168.0.101:8000/api/journals/by-date/${todayStr}?userId=${user.id}`
+        );
         if (!res.ok) {
-          setJournal(null)
+          setJournal(null);
         } else {
-          const data = await res.json()
-          setJournal(data)
+          const data = await res.json();
+          setJournal(data);
         }
       } catch (e) {
-        setJournal(null)
+        setJournal(null);
       }
-    }
-    fetchJournal()
-  }, [todayStr, user])
+    };
+    fetchJournal();
+  }, [todayStr, user]);
 
   const handleDeleteTask = async (id) => {
     try {
-      const res = await fetch(`http://192.168.0.11:8000/api/tasks/${id}`, {
+      const res = await fetch(`http://192.168.0.101:8000/api/tasks/${id}`, {
         method: "DELETE",
-      })
+      });
       if (res.ok) {
-        setTasks((prev) => prev.filter((task) => task._id !== id))
+        setTasks((prev) => prev.filter((task) => task._id !== id));
         Toast.show({
           type: "success",
           text1: "Task deleted successfully",
           position: "bottom",
-        })
+        });
       }
     } catch (e) {
       Toast.show({
         type: "error",
         text1: "Failed to delete task",
         position: "bottom",
-      })
+      });
     }
-  }
+  };
 
   const handleToggleComplete = async (id, currentStatus) => {
     try {
-      const res = await fetch(`http://192.168.0.11:8000/api/tasks/${id}`, {
+      const res = await fetch(`http://192.168.0.101:8000/api/tasks/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: !currentStatus }),
-      })
+      });
       if (res.ok) {
-        setTasks((prev) => prev.map((task) => (task._id === id ? { ...task, done: !currentStatus } : task)))
+        setTasks((prev) =>
+          prev.map((task) =>
+            task._id === id ? { ...task, done: !currentStatus } : task
+          )
+        );
       }
     } catch (e) {}
-  }
+  };
 
   const handleUpdateUsername = async () => {
     if (!newUsername.trim()) {
@@ -217,14 +238,14 @@ export default function YouScreen() {
         type: "error",
         text1: "Username cannot be empty",
         position: "top",
-      })
-      return
+      });
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     const { data, error } = await supabase.auth.updateUser({
       data: { display_name: newUsername },
-    })
+    });
 
     if (error) {
       Toast.show({
@@ -232,61 +253,77 @@ export default function YouScreen() {
         text1: "Error updating username",
         text2: error.message,
         position: "top",
-      })
+      });
     } else {
-      setUser(data.user)
+      setUser(data.user);
       Toast.show({
         type: "success",
         text1: "Username updated successfully!",
         position: "top",
-      })
-      setModalVisible(false)
+      });
+      setModalVisible(false);
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleSignOut = async () => {
-    setModalVisible(false)
-    await supabase.auth.signOut()
+    setModalVisible(false);
+    await supabase.auth.signOut();
     Toast.show({
       type: "success",
       text1: "Signed out successfully",
       position: "top",
-    })
-  }
+    });
+  };
 
   const getMoodEmoji = () => {
-    if (!mood || !mood.mood) return null
+    if (!mood || !mood.mood) return null;
 
     switch (mood.mood) {
       case "Happy":
-        return good
+        return good;
       case "Excited":
-        return excited
+        return excited;
       case "Meh":
-        return meh
+        return meh;
       case "Sad":
-        return sad
+        return sad;
       case "Stressful":
-        return stressful
+        return stressful;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Enhanced Profile Header */}
       <View style={styles.profileHeader}>
         <View style={styles.profileInfo}>
-          <Text style={styles.greeting}>Hello, {user?.user_metadata?.display_name || "there"}</Text>
-          <TouchableOpacity style={styles.editNameButton} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
+          <Text style={styles.greeting}>At a glance</Text>
+          <TouchableOpacity
+            style={styles.editNameButton}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.editNameText}>Edit profile</Text>
-            <Ionicons name="pencil-outline" size={14} color={colors.primary[600]} />
+            <Ionicons
+              name="pencil-outline"
+              size={14}
+              color={colors.primary[600]}
+            />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.settingsButton} onPress={() => setModalVisible(true)} activeOpacity={0.7}>
-          <Ionicons name="settings-outline" size={22} color={colors.neutral[700]} />
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={22}
+            color={colors.neutral[700]}
+          />
         </TouchableOpacity>
       </View>
 
@@ -294,7 +331,11 @@ export default function YouScreen() {
       <View style={styles.dateContainer}>
         <View style={styles.dateContent}>
           <View style={styles.dateIconContainer}>
-            <Ionicons name="calendar-outline" size={20} color={colors.primary[600]} />
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.primary[600]}
+            />
           </View>
           <View style={styles.dateTextContainer}>
             <Text style={styles.date}>{displayDate}</Text>
@@ -312,12 +353,18 @@ export default function YouScreen() {
               <Image source={getMoodEmoji()} style={styles.moodEmoji} />
             ) : (
               <View style={styles.placeholderEmoji}>
-                <Ionicons name="help-circle-outline" size={32} color={colors.neutral[400]} />
+                <Ionicons
+                  name="help-circle-outline"
+                  size={32}
+                  color={colors.neutral[400]}
+                />
               </View>
             )}
           </View>
           <View style={styles.moodCardText}>
-            <Text style={styles.moodLabel}>{loadingMood ? "..." : mood && mood.mood ? mood.mood : "Not set"}</Text>
+            <Text style={styles.moodLabel}>
+              {loadingMood ? "..." : mood && mood.mood ? mood.mood : "Not set"}
+            </Text>
             <Text style={styles.moodSub}>Your mood today</Text>
           </View>
         </View>
@@ -325,10 +372,15 @@ export default function YouScreen() {
         {/* Fixed Quote Card */}
         <View style={styles.quoteCard}>
           <View style={styles.quoteIconContainer}>
-            <Image source={require("../../assets/images/quotepng.png")} style={styles.quotes} />
+            <Image
+              source={require("../../assets/images/quotepng.png")}
+              style={styles.quotes}
+            />
           </View>
           <View style={styles.quoteCardText}>
-            <Text style={styles.quoteText}>We write to taste life twice, in the moment and in retrospect.</Text>
+            <Text style={styles.quoteText}>
+              We write to taste life twice, in the moment and in retrospect.
+            </Text>
             <Text style={styles.quoteAuthor}>Anaïs Nin</Text>
           </View>
         </View>
@@ -339,7 +391,11 @@ export default function YouScreen() {
         <View style={styles.todoHeader}>
           <View style={styles.todoTitleContainer}>
             <View style={styles.todoIconContainer}>
-              <Ionicons name="list-outline" size={20} color={colors.primary[600]} />
+              <Ionicons
+                name="list-outline"
+                size={20}
+                color={colors.primary[600]}
+              />
             </View>
             <Text style={styles.todoTitle}>Things to do</Text>
           </View>
@@ -351,10 +407,16 @@ export default function YouScreen() {
         </View>
 
         {tasks.length > 0 ? (
-          <ScrollView style={styles.tasksList} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+          <ScrollView
+            style={styles.tasksList}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          >
             {tasks.map((task, idx) => (
               <View style={styles.todoItem} key={task._id || idx}>
-                <Text style={[styles.todoText, task.done && styles.todoDone]}>{task.content}</Text>
+                <Text style={[styles.todoText, task.done && styles.todoDone]}>
+                  {task.content}
+                </Text>
                 <View style={styles.todoActions}>
                   <TouchableOpacity
                     style={styles.actionButton}
@@ -362,9 +424,15 @@ export default function YouScreen() {
                     activeOpacity={0.7}
                   >
                     <Ionicons
-                      name={task.done ? "checkmark-circle" : "checkmark-circle-outline"}
+                      name={
+                        task.done
+                          ? "checkmark-circle"
+                          : "checkmark-circle-outline"
+                      }
                       size={22}
-                      color={task.done ? colors.success[500] : colors.neutral[400]}
+                      color={
+                        task.done ? colors.success[500] : colors.neutral[400]
+                      }
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -372,7 +440,11 @@ export default function YouScreen() {
                     onPress={() => handleDeleteTask(task._id)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={colors.error[500]}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -380,9 +452,15 @@ export default function YouScreen() {
           </ScrollView>
         ) : (
           <View style={styles.emptyTasksContainer}>
-            <Ionicons name="clipboard-outline" size={40} color={colors.neutral[300]} />
+            <Ionicons
+              name="clipboard-outline"
+              size={40}
+              color={colors.neutral[300]}
+            />
             <Text style={styles.emptyTasksText}>No tasks for today</Text>
-            <Text style={styles.emptyTasksSubtext}>Add tasks from the home screen</Text>
+            <Text style={styles.emptyTasksSubtext}>
+              Add tasks from the home screen
+            </Text>
           </View>
         )}
       </View>
@@ -391,19 +469,43 @@ export default function YouScreen() {
       {journal && (
         <View style={styles.journalSection}>
           <View style={styles.journalHeader}>
-            <View style={styles.journalTitleContainer}>
+            {/* <View style={styles.journalTitleContainer}>
               <View style={styles.journalIconContainer}>
-                <Ionicons name="book-outline" size={20} color={colors.accent.coral} />
+                <Ionicons
+                  name="book-outline"
+                  size={20}
+                  color={colors.accent.coral}
+                />
               </View>
               <Text style={styles.journalTitle}>Today's Reflection</Text>
-            </View>
+            </View> */}
           </View>
-          <View style={styles.journalCard}>
-            <View style={styles.journalQuoteContainer}>
-              <Image source={require("../../assets/images/quotepng.png")} style={styles.journalQuoteIcon} />
+          <Pressable
+            onPress={() => setJournalModalVisible(true)}
+            style={styles.journalPressable}
+          >
+            <View style={styles.journalItem}>
+              <View style={styles.journalHeaderRow}>
+                <View style={styles.journalTitleContainerRow}>
+                  <View style={styles.journalIconContainerRow}>
+                    <Ionicons
+                      name="book"
+                      size={20}
+                      color={colors.accent.coral}
+                    />
+                  </View>
+                  <Text style={styles.journalTitleRow}>Daily Reflection</Text>
+                </View>
+              </View>
+              <Text style={styles.journalContent} numberOfLines={3}>
+                {journal.content}
+              </Text>
+              <View style={styles.journalFooter}>
+                <Text style={styles.journalDate}>{displayDate}</Text>
+                <Text style={styles.readMoreText}>Tap to read more</Text>
+              </View>
             </View>
-            <Text style={styles.journalText}>{journal.content}</Text>
-          </View>
+          </Pressable>
         </View>
       )}
 
@@ -416,48 +518,137 @@ export default function YouScreen() {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Profile Settings</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setModalVisible(false)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close" size={24} color={colors.neutral[500]} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Display Name</Text>
-              <TextInput
-                style={styles.input}
-                value={newUsername}
-                onChangeText={setNewUsername}
-                placeholder="How should we call you?"
-                placeholderTextColor={colors.neutral[400]}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, styles.updateButton, loading && styles.buttonDisabled]}
-              onPress={handleUpdateUsername}
-              disabled={loading}
-              activeOpacity={0.8}
+        <View style={styles.modalOverlayAnalytics}>
+          <View style={styles.modalContentAnalytics}>
+            <View style={styles.modalHandle} />
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.buttonText}>{loading ? "Updating..." : "Update Username"}</Text>
-            </TouchableOpacity>
+              <Ionicons
+                name="close-circle"
+                size={28}
+                color={colors.accent.coral}
+              />
+            </Pressable>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.settingsModalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.settingsProfileHeader}>
+                <View style={styles.settingsAvatar}>
+                  <Ionicons
+                    name="person-circle"
+                    size={64}
+                    color={colors.primary[400]}
+                  />
+                </View>
+                <Text style={styles.settingsTitle}>Profile Settings</Text>
+              </View>
+              <View style={styles.settingsDivider} />
+              <View style={styles.inputGroupSettings}>
+                <Text style={styles.inputLabel}>Display Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newUsername}
+                  onChangeText={setNewUsername}
+                  placeholder="How should we call you?"
+                  placeholderTextColor={colors.neutral[400]}
+                />
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.updateButton,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={handleUpdateUsername}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? "Updating..." : "Update Username"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.signOutButton]}
+                onPress={handleSignOut}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={20}
+                  color={colors.error[600]}
+                  style={styles.buttonIcon}
+                />
+                <Text style={[styles.buttonText, styles.signOutButtonText]}>
+                  Sign Out
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
-            <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut} activeOpacity={0.8}>
-              <Ionicons name="log-out-outline" size={20} color={colors.error[600]} style={styles.buttonIcon} />
-              <Text style={[styles.buttonText, styles.signOutButtonText]}>Sign Out</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+      {/* Journal Modal (analytics style) */}
+      <Modal
+        visible={journalModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setJournalModalVisible(false)}
+      >
+        <View style={styles.modalOverlayAnalytics}>
+          <View style={styles.modalContentAnalytics}>
+            <View style={styles.modalHandle} />
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setJournalModalVisible(false)}
+            >
+              <Ionicons
+                name="close-circle"
+                size={28}
+                color={colors.accent.coral}
+              />
+            </Pressable>
+            <View style={styles.modalHeaderAnalytics}>
+              <View style={styles.modalTitleContainer}>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="book" size={24} color={colors.accent.coral} />
+                </View>
+                <Text style={styles.modalTitle}>Daily Reflection</Text>
+              </View>
+            </View>
+            <View style={styles.modalDateContainer}>
+              <View style={styles.modalDateWrapper}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={colors.neutral[500]}
+                />
+                <Text style={styles.modalDate}>{displayDate}</Text>
+              </View>
+            </View>
+            <ScrollView
+              style={styles.modalBodyContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalBodyContent}>
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={20}
+                  color={colors.neutral[600]}
+                  style={styles.modalBodyIcon}
+                />
+                <Text style={styles.modalBody}>{journal?.content}</Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
     </ScrollView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -628,7 +819,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quotes: {
-    width: 20,
+    width: 30,
     height: 20,
     tintColor: colors.accent.coral,
   },
@@ -782,34 +973,73 @@ const styles = StyleSheet.create({
     color: colors.neutral[800],
     fontFamily: "Sora-Bold",
   },
-  journalCard: {
+  journalPressable: {
+    borderRadius: 16,
+  },
+  journalItem: {
     backgroundColor: colors.accent.peach,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: colors.accent.lightPeach,
     shadowColor: colors.accent.coral,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  journalQuoteContainer: {
-    alignItems: "flex-start",
-    marginBottom: 8,
+  journalHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  journalQuoteIcon: {
-    width: 20,
-    height: 20,
-    tintColor: colors.accent.coral,
+  journalTitleContainerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
-  journalText: {
+  journalIconContainerRow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accent.lightPeach,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  journalTitleRow: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.accent.coral,
+    fontFamily: "Sora-Bold",
+  },
+  journalContent: {
     fontSize: 15,
     color: colors.accent.coral,
-    fontStyle: "italic",
     lineHeight: 22,
+    marginBottom: 12,
     fontFamily: "Ubuntu-Regular",
+  },
+  journalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  journalDate: {
+    fontSize: 12,
+    color: colors.accent.coral,
+    fontFamily: "Ubuntu-Regular",
+    fontStyle: "italic",
+  },
+  readMoreText: {
+    fontSize: 12,
+    color: colors.accent.coral,
+    fontFamily: "Ubuntu-Regular",
+    fontWeight: "500",
   },
 
   // Bottom Spacing
@@ -818,63 +1048,119 @@ const styles = StyleSheet.create({
   },
 
   // Enhanced Modal Styles
-  modalOverlay: {
+  modalOverlayAnalytics: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "flex-end",
+    // backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
-  modalContent: {
+  modalContentAnalytics: {
     backgroundColor: colors.neutral[50],
-    borderRadius: 24,
-    padding: 24,
-    width: "90%",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    width: "100%",
+    minHeight: "60%",
+    maxHeight: "85%",
     shadowColor: colors.neutral[900],
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: -8,
     },
     shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowRadius: 24,
+    elevation: 25,
+    paddingTop: 12,
   },
-  modalHeader: {
+  modalHandle: {
+    width: 50,
+    height: 5,
+    backgroundColor: colors.accent.peach,
+    borderRadius: 3,
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 16,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    backgroundColor: colors.neutral[100],
+  },
+  modalHeaderAnalytics: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
   },
-  modalTitle: {
-    fontSize: 22,
-    color: colors.neutral[800],
-    fontFamily: "Sora-Bold",
+  modalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
-  modalCloseButton: {
+  modalIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.accent.lightPeach,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
   },
-  inputGroup: {
+  modalTitle: {
+    fontSize: 24,
+    color: colors.neutral[800],
+    flex: 1,
+    letterSpacing: -0.3,
+    lineHeight: 32,
+    fontFamily: "Sora-Bold",
+  },
+  modalDateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    paddingHorizontal: 24,
+  },
+  modalDateWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.neutral[100],
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  modalDate: {
+    fontSize: 14,
+    color: colors.neutral[600],
+    marginLeft: 6,
+    fontStyle: "italic",
+    fontFamily: "Ubuntu-Regular",
+  },
+  modalBodyContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  modalBodyContent: {
+    flexDirection: "row",
     marginBottom: 24,
   },
-  inputLabel: {
-    fontSize: 16,
-    color: colors.neutral[600],
-    marginBottom: 8,
-    fontFamily: "Ubuntu-Regular",
+  modalBodyIcon: {
+    marginRight: 12,
+    marginTop: 2,
   },
-  input: {
-    backgroundColor: colors.neutral[100],
-    borderRadius: 12,
-    padding: 16,
+  modalBody: {
     fontSize: 16,
-    color: colors.neutral[800],
+    color: colors.neutral[700],
+    lineHeight: 24,
+    flex: 1,
     fontFamily: "Ubuntu-Regular",
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
   },
   button: {
     flexDirection: "row",
@@ -914,4 +1200,48 @@ const styles = StyleSheet.create({
   signOutButtonText: {
     color: colors.error[600],
   },
-})
+  settingsModalScrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 32,
+    alignItems: "center",
+  },
+  settingsProfileHeader: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  settingsAvatar: {
+    marginBottom: 8,
+  },
+  settingsTitle: {
+    fontSize: 22,
+    color: colors.neutral[800],
+    fontFamily: "Sora-Bold",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  settingsDivider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: colors.neutral[200],
+    marginVertical: 16,
+    borderRadius: 1,
+  },
+  inputGroupSettings: {
+    width: "100%",
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: colors.neutral[800],
+    fontFamily: "Sora-Bold",
+    marginBottom: 8,
+  },
+  input: {
+    width: "100%",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: 8,
+  },
+});
