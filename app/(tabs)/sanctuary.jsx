@@ -312,7 +312,7 @@ const WellBeingSanctuary = () => {
       setLoadingMood(true);
       try {
         const res = await fetch(
-          `http://192.168.0.101:8000/api/moods/by-date/${todayStr}?userId=${user.id}`
+          `https://feno-app-backendd.onrender.com/api/moods/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setMood(null);

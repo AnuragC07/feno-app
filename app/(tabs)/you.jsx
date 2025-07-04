@@ -136,7 +136,7 @@ export default function YouScreen() {
       setLoadingMood(true);
       try {
         const res = await fetch(
-          `http://192.168.0.101:8000/api/moods/by-date/${todayStr}?userId=${user.id}`
+          `https://feno-app-backendd.onrender.com/api/moods/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setMood(null);
@@ -158,7 +158,7 @@ export default function YouScreen() {
     const fetchTasks = async () => {
       try {
         const res = await fetch(
-          `http://192.168.0.101:8000/api/tasks/by-date/${todayStr}?userId=${user.id}`
+          `https://feno-app-backendd.onrender.com/api/tasks/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setTasks([]);
@@ -178,7 +178,7 @@ export default function YouScreen() {
     const fetchJournal = async () => {
       try {
         const res = await fetch(
-          `http://192.168.0.101:8000/api/journals/by-date/${todayStr}?userId=${user.id}`
+          `https://feno-app-backendd.onrender.com/api/journals/by-date/${todayStr}?userId=${user.id}`
         );
         if (!res.ok) {
           setJournal(null);
@@ -195,9 +195,12 @@ export default function YouScreen() {
 
   const handleDeleteTask = async (id) => {
     try {
-      const res = await fetch(`http://192.168.0.101:8000/api/tasks/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `https://feno-app-backendd.onrender.com/api/tasks/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
       if (res.ok) {
         setTasks((prev) => prev.filter((task) => task._id !== id));
         Toast.show({
@@ -217,11 +220,14 @@ export default function YouScreen() {
 
   const handleToggleComplete = async (id, currentStatus) => {
     try {
-      const res = await fetch(`http://192.168.0.101:8000/api/tasks/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ done: !currentStatus }),
-      });
+      const res = await fetch(
+        `https://feno-app-backendd.onrender.com/api/tasks/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ done: !currentStatus }),
+        }
+      );
       if (res.ok) {
         setTasks((prev) =>
           prev.map((task) =>

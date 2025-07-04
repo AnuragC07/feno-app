@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -41,6 +41,12 @@
     },
     "assetBundlePatterns": [
       "assets/fonts/*"
-    ]
+    ],
+    "extra": {
+      "router": {}
+    },
+    "eas": {
+      "projectId": "f36bb9f2-2c00-451b-ae7b-9d7863fe8809"
+    }
   }
 }

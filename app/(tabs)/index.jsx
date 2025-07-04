@@ -1,18 +1,31 @@
-"use client"
+"use client";
 
-import { Ionicons } from "@expo/vector-icons"
-import { useFonts } from "expo-font"
-import { useRouter } from "expo-router"
-import { useEffect, useRef, useState } from "react"
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
-import { Circle, Svg } from "react-native-svg"
-import Toast from "react-native-toast-message"
-import excited from "../../assets/images/excitedmood.png"
-import good from "../../assets/images/goodmood.png"
-import meh from "../../assets/images/mehmood.png"
-import sad from "../../assets/images/sadmood.png"
-import stressful from "../../assets/images/stressfullmood.png"
-import { supabase } from "../lib/supabase"
+import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Circle, Svg } from "react-native-svg";
+import Toast from "react-native-toast-message";
+import excited from "../../assets/images/excitedmood.png";
+import good from "../../assets/images/goodmood.png";
+import meh from "../../assets/images/mehmood.png";
+import sad from "../../assets/images/sadmood.png";
+import stressful from "../../assets/images/stressfullmood.png";
+import { supabase } from "../lib/supabase";
+
+// Import API configuration
+import { API_ENDPOINTS } from "../../config/api";
 
 // Enhanced color palette
 const colors = {
@@ -76,75 +89,75 @@ const colors = {
     800: "#262626",
     900: "#171717",
   },
-}
+};
 
-// IMPORTANT: Replace with your computer's local IP address
-const TASK_API_URL = "http://192.168.0.101:8000/api/tasks"
-const JOURNAL_API_URL = "http://192.168.0.101:8000/api/journals"
-const MOOD_API_URL = "http://192.168.0.101:8000/api/moods"
+// Backend API URLs - Hosted on Render
+const TASK_API_URL = API_ENDPOINTS.TASKS;
+const JOURNAL_API_URL = API_ENDPOINTS.JOURNALS;
+const MOOD_API_URL = API_ENDPOINTS.MOODS;
 
 export default function Home() {
-  const [user, setUser] = useState(null)
-  const router = useRouter()
-  const [selectedMood, setSelectedMood] = useState(null)
-  const [task, setTask] = useState("")
-  const [todos, setTodos] = useState([])
-  const [journalContent, setJournalContent] = useState("")
-  const [isJournalModalVisible, setJournalModalVisible] = useState(false)
-  const [journalMood, setJournalMood] = useState(null)
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [task, setTask] = useState("");
+  const [todos, setTodos] = useState([]);
+  const [journalContent, setJournalContent] = useState("");
+  const [isJournalModalVisible, setJournalModalVisible] = useState(false);
+  const [journalMood, setJournalMood] = useState(null);
 
   // Pomodoro State
-  const [isPomodoroVisible, setPomodoroVisible] = useState(false)
-  const [duration, setDuration] = useState("25")
-  const [timerCount, setTimerCount] = useState(25 * 60)
-  const [timerActive, setTimerActive] = useState(false)
-  const [pomodoroStatus, setPomodoroStatus] = useState("idle") // idle, running, finished
-  const timerRef = useRef(null)
+  const [isPomodoroVisible, setPomodoroVisible] = useState(false);
+  const [duration, setDuration] = useState("25");
+  const [timerCount, setTimerCount] = useState(25 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [pomodoroStatus, setPomodoroStatus] = useState("idle"); // idle, running, finished
+  const timerRef = useRef(null);
 
   const [fontsLoaded] = useFonts({
     "Ubuntu-Regular": require("../../assets/fonts/Ubuntu-Regular.ttf"),
     "Sora-Bold": require("../../assets/fonts/Sora-Bold.ttf"),
-  })
+  });
 
   // Get current user
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
-  }, [])
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+  }, []);
 
   useEffect(() => {
     if (user) {
-      fetchTasks()
+      fetchTasks();
     }
-  }, [user])
+  }, [user]);
 
   useEffect(() => {
-    if (!timerActive) return
+    if (!timerActive) return;
 
     timerRef.current = setInterval(() => {
-      setTimerCount((prev) => prev - 1)
-    }, 1000)
+      setTimerCount((prev) => prev - 1);
+    }, 1000);
 
-    return () => clearInterval(timerRef.current)
-  }, [timerActive])
+    return () => clearInterval(timerRef.current);
+  }, [timerActive]);
 
   useEffect(() => {
     if (timerCount === 0) {
-      clearInterval(timerRef.current)
-      setTimerActive(false)
-      setPomodoroStatus("finished")
+      clearInterval(timerRef.current);
+      setTimerActive(false);
+      setPomodoroStatus("finished");
       Toast.show({
         type: "success",
         text1: "Timer Finished!",
         text2: "Great focus session!",
-      })
+      });
     }
-  }, [timerCount])
+  }, [timerCount]);
 
   const moods = [
     {
@@ -167,37 +180,37 @@ export default function Home() {
       label: "Stressful",
       emoji: <Image source={stressful} style={styles.moodEmoji} />,
     },
-  ]
+  ];
 
   const fetchTasks = async () => {
-    if (!user) return
+    if (!user) return;
 
     try {
-      const response = await fetch(`${TASK_API_URL}?userId=${user.id}`)
+      const response = await fetch(`${TASK_API_URL}?userId=${user.id}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch tasks")
+        throw new Error("Failed to fetch tasks");
       }
-      const data = await response.json()
-      setTodos(data)
+      const data = await response.json();
+      setTodos(data);
     } catch (error) {
-      console.error(error)
+      console.error(error);
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not fetch tasks from the server.",
-      })
+      });
     }
-  }
+  };
 
   const handleSelectMood = async (moodLabel) => {
-    setSelectedMood(moodLabel) // Update UI immediately for responsiveness
+    setSelectedMood(moodLabel); // Update UI immediately for responsiveness
 
     // Get local date in YYYY-MM-DD
-    const today = new Date()
-    const yyyy = today.getFullYear()
-    const mm = String(today.getMonth() + 1).padStart(2, "0")
-    const dd = String(today.getDate()).padStart(2, "0")
-    const localDate = `${yyyy}-${mm}-${dd}`
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const localDate = `${yyyy}-${mm}-${dd}`;
 
     try {
       const response = await fetch(MOOD_API_URL, {
@@ -206,36 +219,36 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ mood: moodLabel, localDate, userId: user.id }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to save mood")
+        throw new Error("Failed to save mood");
       }
 
       Toast.show({
         type: "success",
         text1: "Success",
         text2: "Mood status updated.",
-      })
+      });
     } catch (error) {
-      console.error(error)
+      console.error(error);
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not save your mood. Please try again.",
-      })
-      setSelectedMood(null) // Revert UI if the API call fails
+      });
+      setSelectedMood(null); // Revert UI if the API call fails
     }
-  }
+  };
 
   const handleAddTask = async () => {
     if (task.trim() !== "") {
       // Get local date in YYYY-MM-DD
-      const today = new Date()
-      const yyyy = today.getFullYear()
-      const mm = String(today.getMonth() + 1).padStart(2, "0")
-      const dd = String(today.getDate()).padStart(2, "0")
-      const localDate = `${yyyy}-${mm}-${dd}`
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const localDate = `${yyyy}-${mm}-${dd}`;
 
       try {
         const response = await fetch(TASK_API_URL, {
@@ -244,63 +257,65 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ content: task, localDate, userId: user.id }), // include localDate
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to add task")
+          throw new Error("Failed to add task");
         }
 
-        setTask("")
-        fetchTasks() // Refetch tasks to update the list
+        setTask("");
+        fetchTasks(); // Refetch tasks to update the list
       } catch (error) {
-        console.error(error)
+        console.error(error);
         Toast.show({
           type: "error",
           text1: "Error",
           text2: "Could not add task.",
-        })
+        });
       }
     }
-  }
+  };
 
   const getTodayDate = () => {
-    const today = new Date()
-    const yyyy = today.getFullYear()
-    const mm = String(today.getMonth() + 1).padStart(2, "0")
-    const dd = String(today.getDate()).padStart(2, "0")
-    return `${yyyy}-${mm}-${dd}`
-  }
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
   const fetchTodayMood = async () => {
-    if (!user) return
+    if (!user) return;
 
-    const today = getTodayDate()
+    const today = getTodayDate();
 
     try {
-      const response = await fetch(`${MOOD_API_URL}/by-date/${today}?userId=${user.id}`)
+      const response = await fetch(
+        `${MOOD_API_URL}/by-date/${today}?userId=${user.id}`
+      );
       if (!response.ok) {
-        setJournalMood(null)
-        return
+        setJournalMood(null);
+        return;
       }
-      const data = await response.json()
-      setJournalMood(data.mood)
+      const data = await response.json();
+      setJournalMood(data.mood);
     } catch (error) {
-      setJournalMood(null)
+      setJournalMood(null);
     }
-  }
+  };
 
   const openJournalModal = () => {
-    setJournalModalVisible(true)
-    fetchTodayMood()
-  }
+    setJournalModalVisible(true);
+    fetchTodayMood();
+  };
 
   const handleSaveJournal = async () => {
     if (journalContent.trim() !== "" && journalMood) {
-      const today = new Date()
-      const yyyy = today.getFullYear()
-      const mm = String(today.getMonth() + 1).padStart(2, "0")
-      const dd = String(today.getDate()).padStart(2, "0")
-      const localDate = `${yyyy}-${mm}-${dd}`
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const localDate = `${yyyy}-${mm}-${dd}`;
 
       try {
         const response = await fetch(JOURNAL_API_URL, {
@@ -314,55 +329,56 @@ export default function Home() {
             localDate,
             userId: user.id,
           }),
-        })
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to save journal entry")
+          throw new Error("Failed to save journal entry");
         }
 
-        setJournalContent("") // Clear input after saving
+        setJournalContent(""); // Clear input after saving
         Toast.show({
           type: "success",
           text1: "Success",
           text2: "Your journal entry has been saved.",
-        })
+        });
       } catch (error) {
-        console.error(error)
+        console.error(error);
         Toast.show({
           type: "error",
           text1: "Error",
           text2: "Could not save journal entry.",
-        })
+        });
       }
     } else {
       Toast.show({
         type: "info",
         text1: "Can't Save",
-        text2: "Please make sure your mood is set for today and write something in your journal before saving.",
-      })
+        text2:
+          "Please make sure your mood is set for today and write something in your journal before saving.",
+      });
     }
-  }
+  };
 
   const handleDelete = async (id) => {
     try {
       const response = await fetch(`${TASK_API_URL}/${id}`, {
         method: "DELETE",
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to delete task")
+        throw new Error("Failed to delete task");
       }
 
-      fetchTasks() // Refetch
+      fetchTasks(); // Refetch
     } catch (error) {
-      console.error(error)
+      console.error(error);
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not delete task.",
-      })
+      });
     }
-  }
+  };
 
   const handleToggleComplete = async (id, currentStatus) => {
     try {
@@ -372,76 +388,78 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ done: !currentStatus }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to update task")
+        throw new Error("Failed to update task");
       }
 
-      fetchTasks() // Refetch
+      fetchTasks(); // Refetch
     } catch (error) {
-      console.error(error)
+      console.error(error);
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Could not update task.",
-      })
+      });
     }
-  }
+  };
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut();
       Toast.show({
         type: "success",
         text1: "Success",
         text2: "Signed out successfully!",
-      })
+      });
     } catch (error) {
       Toast.show({
         type: "error",
         text1: "Error",
         text2: "Failed to sign out",
-      })
+      });
     }
-  }
+  };
 
   const startPomodoro = () => {
-    const mins = Number.parseInt(duration, 10)
+    const mins = Number.parseInt(duration, 10);
     if (mins > 0) {
-      setPomodoroStatus("running")
-      setTimerCount(mins * 60)
-      setTimerActive(true)
+      setPomodoroStatus("running");
+      setTimerCount(mins * 60);
+      setTimerActive(true);
     } else {
       Toast.show({
         type: "error",
         text1: "Invalid Duration",
         text2: "Duration must be greater than 0.",
-      })
+      });
     }
-  }
+  };
 
   const resetPomodoro = () => {
-    clearInterval(timerRef.current)
-    setTimerActive(false)
-    setPomodoroStatus("idle")
-    const mins = Number.parseInt(duration, 10) || 25
-    setTimerCount(mins * 60)
-  }
+    clearInterval(timerRef.current);
+    setTimerActive(false);
+    setPomodoroStatus("idle");
+    const mins = Number.parseInt(duration, 10) || 25;
+    setTimerCount(mins * 60);
+  };
 
   const handleClosePomodoro = () => {
-    resetPomodoro()
-    setPomodoroVisible(false)
-  }
+    resetPomodoro();
+    setPomodoroVisible(false);
+  };
 
   const formatTime = (time) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = time % 60
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-  }
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   if (!fontsLoaded) {
-    return null // or <AppLoading />
+    return null; // or <AppLoading />
   }
 
   return (
@@ -450,11 +468,20 @@ export default function Home() {
         <View style={styles.header}>
           <View style={styles.greet}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Heya, {user?.user_metadata?.display_name || "User"}!</Text>
+              <Text style={styles.title}>
+                Heya, {user?.user_metadata?.display_name || "User"}!
+              </Text>
               {!user?.user_metadata?.display_name && user && (
-                <TouchableOpacity onPress={() => router.push("/(tabs)/you")} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={() => router.push("/(tabs)/you")}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.editUsernameContainer}>
-                    <Ionicons name="pencil-outline" size={16} color={colors.secondary[600]} />
+                    <Ionicons
+                      name="pencil-outline"
+                      size={16}
+                      color={colors.secondary[600]}
+                    />
                     <Text style={styles.editUsernameText}>Set a username</Text>
                   </View>
                 </TouchableOpacity>
@@ -468,7 +495,10 @@ export default function Home() {
               {moods.map((mood, idx) => (
                 <Pressable
                   key={mood.label}
-                  style={[styles.moodButton, selectedMood === mood.label && styles.moodButtonSelected]}
+                  style={[
+                    styles.moodButton,
+                    selectedMood === mood.label && styles.moodButtonSelected,
+                  ]}
                   onPress={() => handleSelectMood(mood.label)}
                 >
                   <View style={styles.moodEmojiContainer}>{mood.emoji}</View>
@@ -492,26 +522,57 @@ export default function Home() {
               onChangeText={setTask}
             />
             <Pressable style={styles.taskInputSendBtn} onPress={handleAddTask}>
-              <Ionicons name="paper-plane-outline" size={20} color={colors.secondary[600]} />
+              <Ionicons
+                name="paper-plane-outline"
+                size={20}
+                color={colors.secondary[600]}
+              />
             </Pressable>
           </View>
         </View>
 
         <View style={styles.tasksListContainer}>
-          <ScrollView style={styles.tasksList} showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
+          <ScrollView
+            style={styles.tasksList}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
             {todos.map((todo) => (
               <View key={todo._id} style={styles.todoItem}>
-                <Text style={[styles.todoText, todo.done && styles.todoTextCompleted]}>{todo.content}</Text>
+                <Text
+                  style={[
+                    styles.todoText,
+                    todo.done && styles.todoTextCompleted,
+                  ]}
+                >
+                  {todo.content}
+                </Text>
                 <View style={styles.todoActions}>
-                  <Pressable onPress={() => handleToggleComplete(todo._id, todo.done)} style={styles.actionButton}>
+                  <Pressable
+                    onPress={() => handleToggleComplete(todo._id, todo.done)}
+                    style={styles.actionButton}
+                  >
                     <Ionicons
-                      name={todo.done ? "checkmark-circle" : "checkmark-circle-outline"}
+                      name={
+                        todo.done
+                          ? "checkmark-circle"
+                          : "checkmark-circle-outline"
+                      }
                       size={24}
-                      color={todo.done ? colors.success[500] : colors.neutral[400]}
+                      color={
+                        todo.done ? colors.success[500] : colors.neutral[400]
+                      }
                     />
                   </Pressable>
-                  <Pressable onPress={() => handleDelete(todo._id)} style={styles.actionButton}>
-                    <Ionicons name="trash-outline" size={20} color={colors.neutral[400]} />
+                  <Pressable
+                    onPress={() => handleDelete(todo._id)}
+                    style={styles.actionButton}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={colors.neutral[400]}
+                    />
                   </Pressable>
                 </View>
               </View>
@@ -520,20 +581,38 @@ export default function Home() {
         </View>
 
         <View style={styles.actionContainer}>
-          <Pressable style={styles.pomodoroTriggerContainer} onPress={() => setPomodoroVisible(true)}>
+          <Pressable
+            style={styles.pomodoroTriggerContainer}
+            onPress={() => setPomodoroVisible(true)}
+          >
             <View style={styles.actionIconContainer}>
-              <Ionicons name="timer-outline" size={21} color={colors.primary[600]} />
+              <Ionicons
+                name="timer-outline"
+                size={21}
+                color={colors.primary[600]}
+              />
             </View>
             <Text style={styles.pomodoroTriggerTitle}>Focus Time</Text>
-            <Text style={styles.pomodoroTriggerSubtitle}>Pomodoro timer for deep work</Text>
+            <Text style={styles.pomodoroTriggerSubtitle}>
+              Pomodoro timer for deep work
+            </Text>
           </Pressable>
 
-          <Pressable style={styles.journalTriggerContainer} onPress={openJournalModal}>
+          <Pressable
+            style={styles.journalTriggerContainer}
+            onPress={openJournalModal}
+          >
             <View style={styles.actionIconContainer}>
-              <Ionicons name="book-outline" size={21} color={colors.secondary[600]} />
+              <Ionicons
+                name="book-outline"
+                size={21}
+                color={colors.secondary[600]}
+              />
             </View>
             <Text style={styles.journalTriggerTitle}>Daily Reflection</Text>
-            <Text style={styles.journalTriggerSubtitle}>Write in your journal</Text>
+            <Text style={styles.journalTriggerSubtitle}>
+              Write in your journal
+            </Text>
           </Pressable>
         </View>
 
@@ -543,7 +622,7 @@ export default function Home() {
           transparent={true}
           visible={isJournalModalVisible}
           onRequestClose={() => {
-            setJournalModalVisible(!isJournalModalVisible)
+            setJournalModalVisible(!isJournalModalVisible);
           }}
         >
           <View style={styles.modalOverlay}>
@@ -551,10 +630,17 @@ export default function Home() {
               {/* Modal Handle */}
               <View style={styles.modalHandle} />
               <Pressable
-                style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && styles.closeButtonPressed,
+                ]}
                 onPress={() => setJournalModalVisible(false)}
               >
-                <Ionicons name="close-circle" size={28} color={colors.secondary[600]} />
+                <Ionicons
+                  name="close-circle"
+                  size={28}
+                  color={colors.secondary[600]}
+                />
               </Pressable>
 
               <View style={styles.journalHeader}>
@@ -562,7 +648,9 @@ export default function Home() {
                 <View style={styles.moodContainer}>
                   <View style={styles.moodBadge}>
                     <Text style={styles.moodLabelCnt}>Today's Mood:</Text>
-                    <Text style={styles.moodValue}>{journalMood ? journalMood : "No mood set for today"}</Text>
+                    <Text style={styles.moodValue}>
+                      {journalMood ? journalMood : "No mood set for today"}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -597,15 +685,19 @@ export default function Home() {
                       !journalContent.trim() && styles.sendButtonDisabled,
                     ]}
                     onPress={() => {
-                      handleSaveJournal()
-                      setJournalModalVisible(false)
+                      handleSaveJournal();
+                      setJournalModalVisible(false);
                     }}
                     disabled={!journalContent.trim()}
                   >
                     <Ionicons
                       name="paper-plane"
                       size={18}
-                      color={journalContent.trim() ? "#FFFFFF" : "rgba(255, 255, 255, 0.5)"}
+                      color={
+                        journalContent.trim()
+                          ? "#FFFFFF"
+                          : "rgba(255, 255, 255, 0.5)"
+                      }
                     />
                   </Pressable>
                 </View>
@@ -616,9 +708,17 @@ export default function Home() {
       </ScrollView>
 
       {/* Pomodoro Modal */}
-      <Modal visible={isPomodoroVisible} animationType="slide" transparent={false} onRequestClose={handleClosePomodoro}>
+      <Modal
+        visible={isPomodoroVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={handleClosePomodoro}
+      >
         <View style={styles.pomodoroContainer}>
-          <TouchableOpacity style={styles.pomodoroCloseButton} onPress={handleClosePomodoro}>
+          <TouchableOpacity
+            style={styles.pomodoroCloseButton}
+            onPress={handleClosePomodoro}
+          >
             <Ionicons name="close" size={28} color={colors.neutral[600]} />
           </TouchableOpacity>
 
@@ -628,7 +728,9 @@ export default function Home() {
                 <Ionicons name="timer" size={64} color={colors.primary[500]} />
               </View>
               <Text style={styles.pomodoroTitle}>Focus Timer</Text>
-              <Text style={styles.pomodoroDescription}>Set your focus duration and start a productive session</Text>
+              <Text style={styles.pomodoroDescription}>
+                Set your focus duration and start a productive session
+              </Text>
 
               <View style={styles.pomodoroInputGroup}>
                 <Text style={styles.pomodoroLabel}>Duration (minutes)</Text>
@@ -641,19 +743,33 @@ export default function Home() {
                 />
               </View>
 
-              <TouchableOpacity style={styles.pomodoroStartButton} onPress={startPomodoro}>
-                <Text style={styles.pomodoroStartButtonText}>Start Focusing</Text>
+              <TouchableOpacity
+                style={styles.pomodoroStartButton}
+                onPress={startPomodoro}
+              >
+                <Text style={styles.pomodoroStartButtonText}>
+                  Start Focusing
+                </Text>
               </TouchableOpacity>
             </View>
           )}
 
           {pomodoroStatus === "running" && (
             <View style={styles.pomodoroTimer}>
-              <Text style={styles.pomodoroSessionText}>Focus session in progress</Text>
+              <Text style={styles.pomodoroSessionText}>
+                Focus session in progress
+              </Text>
 
               <View style={styles.timerWrapper}>
                 <Svg width={280} height={280} viewBox="0 0 280 280">
-                  <Circle cx="140" cy="140" r="120" stroke={colors.neutral[200]} strokeWidth="12" fill="none" />
+                  <Circle
+                    cx="140"
+                    cy="140"
+                    r="120"
+                    stroke={colors.neutral[200]}
+                    strokeWidth="12"
+                    fill="none"
+                  />
                   <Circle
                     cx="140"
                     cy="140"
@@ -663,7 +779,12 @@ export default function Home() {
                     fill="none"
                     strokeDasharray={2 * Math.PI * 120}
                     strokeDashoffset={
-                      2 * Math.PI * 120 * (1 - timerCount / ((Number.parseInt(duration, 10) || 25) * 60))
+                      2 *
+                      Math.PI *
+                      120 *
+                      (1 -
+                        timerCount /
+                          ((Number.parseInt(duration, 10) || 25) * 60))
                     }
                     strokeLinecap="round"
                     transform="rotate(-90 140 140)"
@@ -672,7 +793,10 @@ export default function Home() {
                 <Text style={styles.timerText}>{formatTime(timerCount)}</Text>
               </View>
 
-              <TouchableOpacity style={styles.pomodoroResetButton} onPress={resetPomodoro}>
+              <TouchableOpacity
+                style={styles.pomodoroResetButton}
+                onPress={resetPomodoro}
+              >
                 <Text style={styles.pomodoroResetButtonText}>Stop & Reset</Text>
               </TouchableOpacity>
             </View>
@@ -681,20 +805,33 @@ export default function Home() {
           {pomodoroStatus === "finished" && (
             <View style={styles.pomodoroFinished}>
               <View style={styles.pomodoroSuccessIcon}>
-                <Ionicons name="checkmark-circle" size={80} color={colors.success[500]} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={80}
+                  color={colors.success[500]}
+                />
               </View>
-              <Text style={styles.pomodoroFinishedText}>Excellent focus session!</Text>
-              <Text style={styles.pomodoroFinishedSubtext}>You've completed your focused work time</Text>
+              <Text style={styles.pomodoroFinishedText}>
+                Excellent focus session!
+              </Text>
+              <Text style={styles.pomodoroFinishedSubtext}>
+                You've completed your focused work time
+              </Text>
 
-              <TouchableOpacity style={styles.pomodoroStartButton} onPress={resetPomodoro}>
-                <Text style={styles.pomodoroStartButtonText}>Start Another Session</Text>
+              <TouchableOpacity
+                style={styles.pomodoroStartButton}
+                onPress={resetPomodoro}
+              >
+                <Text style={styles.pomodoroStartButtonText}>
+                  Start Another Session
+                </Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       </Modal>
     </>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -1021,7 +1158,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    // backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
 
   journalEntryContainer: {
@@ -1429,4 +1566,4 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     lineHeight: 24,
   },
-})
+});

@@ -24,6 +24,8 @@ import sad from "../../assets/images/sadmood.png";
 import stressful from "../../assets/images/stressfullmood.png";
 import { supabase } from "../lib/supabase";
 
+import { API_BASE_URL } from "../../config/api";
+
 // Enhanced color palette (consistent with home screen)
 const colors = {
   primary: {
@@ -94,7 +96,7 @@ const colors = {
   },
 };
 
-const API_BASE = "http://192.168.0.101:8000/api"; // Change if needed
+const API_BASE = API_BASE_URL; // Backend hosted on Render
 
 // Mood mapping for analytics
 const moodMap = [
