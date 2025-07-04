@@ -1,48 +1,16 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { Redirect, Tabs } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { Tabs } from "expo-router";
+import { useEffect, useRef } from "react";
 import { Animated, StyleSheet } from "react-native";
-import { supabase } from "../lib/supabase";
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function TabLayout() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   // Move all hooks to the top before any conditional returns
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.7)).current;
-
-  useEffect(() => {
-    // Check current session
-    const getSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
-    };
-
-    getSession();
-
-    // Listen to auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
-
-    return () => {
-      authListener.subscription?.unsubscribe();
-    };
-  }, []);
-
-  if (loading) return null;
-
-  if (!session) {
-    return <Redirect href="/signin" />;
-  }
 
   const animateTab = (focused) => {
     Animated.parallel([

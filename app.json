@@ -41,11 +41,6 @@
     },
     "assetBundlePatterns": [
       "assets/fonts/*"
-    ],
-    "extra": {
-      "supabaseUrl": "https://ajfmjnnrhcgenvcuwmul.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqZm1qbm5yaGNnZW52Y3V3bXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExOTg5MDcsImV4cCI6MjA2Njc3NDkwN30.toyDwzQQagd1LwwVmidhSdBoxGbJYZrZpMGNnWEcazE",
-      "supabaseRedirectUri": "https://ajfmjnnrhcgenvcuwmul.supabase.co/auth/v1/callback"
-    }
+    ]
   }
 }
