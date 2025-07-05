@@ -16,7 +16,9 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
+      "edgeToEdgeEnabled": true,
+      "package": "com.anuragdev07.feno"
     },
     "web": {
       "bundler": "metro",
@@ -39,11 +41,12 @@
     "experiments": {
       "typedRoutes": true
     },
-    "assetBundlePatterns": [
-      "assets/fonts/*"
-    ],
+    "assetBundlePatterns": ["assets/fonts/*"],
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "f36bb9f2-2c00-451b-ae7b-9d7863fe8809"
+      }
     },
     "eas": {
       "projectId": "f36bb9f2-2c00-451b-ae7b-9d7863fe8809"
