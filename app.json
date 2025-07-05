@@ -18,7 +18,9 @@
       },
       "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
       "edgeToEdgeEnabled": true,
-      "package": "com.anuragdev07.feno"
+      "package": "com.anuragdev07.feno",
+      "allowBackup": true,
+      "usesCleartextTraffic": false
     },
     "web": {
       "bundler": "metro",

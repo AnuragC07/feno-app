@@ -18,15 +18,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("Supabase session on mount:", session);
-      if (session) {
-        // Already logged in, go to home
-        router.replace("/(tabs)");
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        console.log("Supabase session on mount:", session);
+        if (session) {
+          // Already logged in, go to home
+          router.replace("/(tabs)");
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+        // Continue to auth screen even if there's an error
+      } finally {
+        setCheckingSession(false);
       }
-      setCheckingSession(false);
     };
     checkSession();
   }, []);
